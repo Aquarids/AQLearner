@@ -1,4 +1,5 @@
 import numpy as np
+import learn_math
 
 class LinearRegression:
     def __init__(self) -> None:
@@ -8,13 +9,12 @@ class LinearRegression:
     def fit(self, X, y):
         X = np.array(X)
         y = np.array(y)
-        self.w = np.linalg.inv(X.T @ X) @ X.T @ y
+        self.w = learn_math.normal_eq(X, y)
         self.b = np.mean(y - X @ self.w)
 
     def predict(self, X):
         return X @ self.w + self.b
     
-    def score(self, X, y):
-        y_pred = self.predict(X)
-        return 1 - np.sum((y - y_pred) ** 2) / np.sum((y - np.mean(y)) ** 2)
+    def r_squared_score(self, y_test, y_pred):
+        return learn_math.r_squared(y_test, y_pred)
     
