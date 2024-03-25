@@ -6,7 +6,13 @@ def normal_eq(X, y):
 
 # R-squared
 def r_squared(y, y_pred):
-    return 1 - np.sum((y - y_pred) ** 2) / np.sum((y - np.mean(y)) ** 2)
+    # Coefficient of determination
+    ss_res = np.sum((y - y_pred) ** 2)
+    # Total sum of squares
+    ss_tot = np.sum((y - np.mean(y)) ** 2)
+    if ss_tot == 0:
+        return float('nan')
+    return 1 - ss_res / ss_tot
 
 # Sigmoid function
 def sigmoid(z):
