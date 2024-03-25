@@ -10,7 +10,7 @@ class LogisticRegression():
     def fit(self, X, y):
         self.w = np.zeros(X.shape[1])
         for _ in range(self.n_iter):
-            self.w -= self.alpha * self._gradient(X)
+            self.w -= self.alpha * self._gradient(X, y)
 
     def _gradient(self, X, y):
         y_pred = learn_math.sigmoid(X @ self.w)
