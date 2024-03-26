@@ -29,7 +29,6 @@ class DBScan:
         neighbors = []
         for j in range(self.X.shape[0]):
             if np.linalg.norm(self.X[i] - self.X[j]) < self.eps:
-                print(np.linalg.norm(self.X[i] - self.X[j]))
                 neighbors.append(j)
         return neighbors
 

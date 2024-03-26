@@ -21,3 +21,18 @@ def sigmoid(z):
 # Binary cross-entropy loss
 def binary_crossentropy(m, y, y_pred):
     return -1/m * np.sum(y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred))
+
+# Entropy
+def caculate_entropy(y):
+    _, counts = np.unique(y, return_counts=True)
+    p = counts / len(y)
+    return -np.sum(p * np.log2(p))
+
+def most_common(y):
+    return np.bincount(y).argmax()
+
+# Gini impurity
+def gini(y):
+    _, counts = np.unique(y, return_counts=True)
+    p = counts / len(y)
+    return 1 - np.sum(p ** 2)
