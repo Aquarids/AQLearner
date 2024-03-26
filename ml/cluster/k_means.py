@@ -6,6 +6,7 @@ class KMeans:
         self.n_clusters = n_clusters
         self.n_iter = n_iter
         self.centroids = None
+        self.labels = None
 
     def fit(self, X):
         self.centroids = X[np.random.choice(X.shape[0], self.n_clusters, replace=False)]
@@ -15,6 +16,7 @@ class KMeans:
             if np.all(self.centroids == new_centroids):
                 break
             self.centroids = new_centroids
+        self.labels = clusters
 
     def _assign_clusters(self, X):
         clusters = []
@@ -30,8 +32,7 @@ class KMeans:
             new_centroids.append(np.mean(cluster, axis=0))
         return np.array(new_centroids)
     
-    def predict(self, X):
-        clusters = self._assign_clusters(X)
-        return clusters
+    def get_labels(self):
+        return self.labels
     
         
