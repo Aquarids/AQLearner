@@ -9,6 +9,8 @@ from ml.tree.id3 import ID3
 from ml.tree.c45 import C45
 from ml.tree.cart import CART
 from ml.svm.linear_svm import LinearSVM
+from ml.bayes.naive_bayes import NaiveBayesClassifier
+from ml.bayes.gaussian_naive_bayes import GaussianNaiveBayesClassifier
 
 import sklearn.datasets as datasets
 import sklearn.model_selection
@@ -145,6 +147,31 @@ class TestSVM(unittest.TestCase):
         y_pred = model.predict(test_X)
         print('SVM Accuracy:', model.accuracy_score(test_y, y_pred))
         plt.show()
+
+class TestNaiveBayes(unittest.TestCase):
+    def test_naive_bayes(self):
+        X, y = datasets.make_classification(n_samples=100, n_features=5, n_redundant=0, n_clusters_per_class=1)
+
+        train_X, train_y = X[:90], y[:90]
+        test_X, test_y = X[90:], y[90:]
+
+        model = NaiveBayesClassifier()
+        model.fit(train_X, train_y)
+
+        y_pred = model.predict(test_X)
+        print('Naive Bayes Accuracy:', model.accuracy_score(test_y, y_pred))
+
+    def test_gaussian_naive_bayes(self):
+        X, y = datasets.make_classification(n_samples=100, n_features=5, n_redundant=0, n_clusters_per_class=1)
+
+        train_X, train_y = X[:90], y[:90]
+        test_X, test_y = X[90:], y[90:]
+
+        model = GaussianNaiveBayesClassifier()
+        model.fit(train_X, train_y)
+
+        y_pred = model.predict(test_X)
+        print('Gaussian Naive Bayes Accuracy:', model.accuracy_score(test_y, y_pred))
 
 
 if __name__ == '__main__':

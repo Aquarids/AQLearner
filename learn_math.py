@@ -45,3 +45,8 @@ def geometric_margin(X, y, w, b):
 # Hinge loss
 def hinge_loss(m, y, y_pred):
     return 1/m * np.sum(np.maximum(0, 1 - y * y_pred))
+
+# Gaussian probability density
+def gaussian_pdf(x, mean, var):
+    exponent = np.exp(-((x - mean) ** 2) / (2 * var))
+    return (1 / np.sqrt(2 * np.pi * var)) * exponent
