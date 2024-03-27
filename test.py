@@ -8,6 +8,7 @@ from ml.cluster.db_scan import DBScan
 from ml.tree.id3 import ID3
 from ml.tree.c45 import C45
 from ml.tree.cart import CART
+from ml.svm.linear_svm import LinearSVM
 
 import sklearn.datasets as datasets
 import sklearn.model_selection
@@ -110,6 +111,41 @@ class TestTree(unittest.TestCase):
         y_pred = model.predict(test_X)
         print('CART Tree:', model.get_tree())
         print('CART Accuracy:', model.accuracy_score(test_y, y_pred))
+
+class TestSVM(unittest.TestCase):
+    def plot_svm_decision_boundary(self, w, b, X, y):
+        # Generate x values (x-axis) from the feature space
+        x_values = np.linspace(min(X[:, 0]), max(X[:, 0]), 200)
+
+        # Calculate y values (decision boundary) using the weights and bias
+        y_values = -(w[0] / w[1]) * x_values - b / w[1]
+
+        # Plot the decision boundary
+        plt.plot(x_values, y_values, "k", linewidth=2, label="Decision Boundary")
+
+        # Plot the dataset
+        plt.scatter(X[:, 0], X[:, 1], c=y, cmap='autumn', s=20, edgecolors='k', label="Data points")
+
+        plt.xlabel("Feature 1")
+        plt.ylabel("Feature 2")
+        plt.title("Linear SVM Decision Boundary and Test Results")
+        plt.legend()
+        plt.show()
+
+    def test_linear_svm(self):
+        X, y = datasets.make_blobs(n_samples=100, n_features=2, centers=2, cluster_std=1.05, random_state=40)
+        y = np.where(y == 0, -1, 1)
+
+        train_X, test_X, train_y, test_y = sklearn.model_selection.train_test_split(X, y, test_size=0.2, random_state=42)
+
+        model = LinearSVM()
+        model.fit(train_X, train_y)
+        self.plot_svm_decision_boundary(model.w, model.b, test_X, test_y)
+
+        y_pred = model.predict(test_X)
+        print('SVM Accuracy:', model.accuracy_score(test_y, y_pred))
+        plt.show()
+
 
 if __name__ == '__main__':
     unittest.main()

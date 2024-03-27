@@ -28,6 +28,7 @@ def caculate_entropy(y):
     p = counts / len(y)
     return -np.sum(p * np.log2(p))
 
+# Select the most common element
 def most_common(y):
     return np.bincount(y).argmax()
 
@@ -36,3 +37,11 @@ def gini(y):
     _, counts = np.unique(y, return_counts=True)
     p = counts / len(y)
     return 1 - np.sum(p ** 2)
+
+# Minimum geometric margin
+def geometric_margin(X, y, w, b):
+    return np.min(y * (X @ w + b))
+
+# Hinge loss
+def hinge_loss(m, y, y_pred):
+    return 1/m * np.sum(np.maximum(0, 1 - y * y_pred))
