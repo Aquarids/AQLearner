@@ -12,6 +12,8 @@ from ml.tree.cart import CART
 from ml.svm.linear_svm import LinearSVM
 from ml.bayes.naive_bayes import NaiveBayesClassifier
 from ml.bayes.gaussian_naive_bayes import GaussianNaiveBayesClassifier
+from ml.ensemble.adaboost import AdaBoost
+from ml.ensemble.random_forest import RandomForest
 
 import sklearn.datasets as datasets
 import sklearn.model_selection
@@ -186,6 +188,28 @@ class TestNaiveBayes(unittest.TestCase):
         y_pred = model.predict(test_X)
         print('Gaussian Naive Bayes Accuracy:', model.accuracy_score(test_y, y_pred))
 
+class TestEnsmbleLearning(unittest.TestCase):
+    def test_adaboost(self):
+        X, y = datasets.make_classification(n_samples=100, n_features=5, n_redundant=0, n_clusters_per_class=1)
+        train_X, train_y = X[:90], y[:90]
+        test_X, test_y = X[90:], y[90:]
+
+        model = AdaBoost(n_learners=5)
+        model.fit(train_X, train_y)
+
+        y_pred = model.predict(test_X)
+        print('AdaBoost Accuracy:', model.accuracy_score(test_y, y_pred))
+
+    def test_random_forest(self):
+        X, y = datasets.make_classification(n_samples=100, n_features=5, n_redundant=0, n_clusters_per_class=1)
+        train_X, train_y = X[:90], y[:90]
+        test_X, test_y = X[90:], y[90:]
+
+        model = RandomForest(n_trees=5)
+        model.fit(train_X, train_y)
+
+        y_pred = model.predict(test_X)
+        print('Random Forest Accuracy:', model.accuracy_score(test_y, y_pred))
 
 if __name__ == '__main__':
     unittest.main()
