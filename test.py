@@ -3,6 +3,7 @@ import numpy as np
 
 from ml.linear.linear_regression import LinearRegression
 from ml.linear.logistic_regression import LogisticRegression
+from ml.linear.knn import KNN
 from ml.cluster.k_means import KMeans
 from ml.cluster.db_scan import DBScan
 from ml.tree.id3 import ID3
@@ -40,6 +41,18 @@ class TestLinear(unittest.TestCase):
 
         y_pred = model.predict(test_X)
         print('Logistic Regression Accuracy:', model.accuracy_score(test_y, y_pred))
+
+    def test_knn(self):
+        X, y = datasets.make_classification(n_samples=100, n_features=5, n_redundant=0, n_clusters_per_class=1)
+
+        train_X, train_y = X[:18], y[:18]
+        test_X, test_y = X[18:], y[18:]
+
+        model = KNN()
+        model.fit(train_X, train_y)
+
+        y_pred = model.predict(test_X)
+        print('KNN Accuracy:', model.accuracy_score(test_y, y_pred))
 
 class TestCluster(unittest.TestCase):
     def test_kmeans(self):

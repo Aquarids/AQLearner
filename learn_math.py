@@ -18,6 +18,10 @@ def r_squared(y, y_pred):
 def sigmoid(z):
     return 1 / (1 + np.exp(-z))
 
+# Euclidean distance
+def euclidean_distance(x1, x2):
+    return np.sqrt(np.sum((x1 - x2) ** 2))
+
 # Binary cross-entropy loss
 def binary_crossentropy(m, y, y_pred):
     return -1/m * np.sum(y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred))
