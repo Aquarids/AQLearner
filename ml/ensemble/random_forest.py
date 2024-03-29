@@ -18,15 +18,12 @@ class RandomForest:
     
     def predict(self, X):
         tree_preds = np.array([tree.predict(X) for tree in self.trees])
-        return self._most_common(tree_preds)
+        return [learn_math.most_common(row) for row in tree_preds.T]
     
     def _bootstrap_sample(self, X, y):
         n_samples = X.shape[0]
         idxs = np.random.choice(n_samples, size=n_samples, replace=True)
         return X[idxs], y[idxs]
-    
-    def _most_common(self, arr):
-        return [learn_math.most_common(row) for row in arr.T]
     
     def accuracy_score(self, y_test, y_pred):
         return np.sum(y_test == y_pred) / len(y_test)

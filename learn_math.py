@@ -54,3 +54,7 @@ def hinge_loss(m, y, y_pred):
 def gaussian_pdf(x, mean, var):
     exponent = np.exp(-((x - mean) ** 2) / (2 * var))
     return (1 / np.sqrt(2 * np.pi * var)) * exponent
+
+# Mse loss
+def mse_loss(y, y_pred):
+    return np.mean((y - y_pred) ** 2)
