@@ -8,21 +8,23 @@ def mse(y_true, y_pred):
     return np.mean((y_true - y_pred) ** 2)
 
 def precision_recall_f1(y_true, y_pred):
+    eps = 1e-7
     true_positive = np.sum((y_pred == 1) & (y_true == 1))
     false_positive = np.sum((y_pred == 1) & (y_true == 0))
     false_negative = np.sum((y_pred == 0) & (y_true == 1))
-    precision = true_positive / (true_positive + false_positive)
-    recall = true_positive / (true_positive + false_negative)
-    f1 = 2 * (precision * recall) / (precision + recall)
+    precision = true_positive / (true_positive + false_positive + eps)
+    recall = true_positive / (true_positive + false_negative + eps)
+    f1 = 2 * (precision * recall) / (precision + recall + eps)
     return precision, recall, f1
 
 def tpr_fpr(y_true, y_pred):
+    eps = 1e-7
     true_positive = np.sum((y_pred == 1) & (y_true == 1))
     false_positive = np.sum((y_pred == 1) & (y_true == 0))
     false_negative = np.sum((y_pred == 0) & (y_true == 1))
     true_negative = np.sum((y_pred == 0) & (y_true == 0))
-    tpr = true_positive / (true_positive + false_negative)
-    fpr = false_positive / (false_positive + true_negative)
+    tpr = true_positive / (true_positive + false_negative + eps)
+    fpr = false_positive / (false_positive + true_negative + eps)
     return tpr, fpr
 
 def auc(y_true, y_prob):
