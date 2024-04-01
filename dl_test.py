@@ -12,6 +12,7 @@ from dl.simple_linear_regression import SimpleLinearRegression
 from dl.simple_logistic_regression import SimpleLogisticRegression
 from dl.simple_cnn_classifier import SimpleCNNClassifier
 from dl.simple_cnn_regression import SimpleCNNRegression
+from dl.res_net import ResNet
 from dl.rnn import rnn
 from dl.gru import GRU
 from dl.lstm import LSTM
@@ -108,6 +109,41 @@ class TestCNN(unittest.TestCase):
             y_test += y.tolist()
 
         print('SimpleCNNRegression MSE:', Metrics.mse(np.array(y_test), np.array(y_pred)))
+
+class TestResNet(unittest.TestCase):
+    def test_res_net(self):
+        num_classes = 10
+        num_channels = 1
+
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((28, 28)),  # 确保图像大小为28x28
+            torchvision.transforms.ToTensor(),  # 将图像转换为Tensor
+            torchvision.transforms.Normalize((0.5,), (0.5,))  # 标准化
+        ])
+
+        # 下载/加载MNIST数据集
+        train_dataset = torchvision.datasets.MNIST(root='./data', train=True,
+                                                download=True, transform=transform)
+        test_dataset = torchvision.datasets.MNIST(root='./data', train=False,
+                                                download=True, transform=transform)
+
+        # 创建DataLoader
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+        model = ResNet(num_channels, num_classes)
+        model.fit(train_loader)
+        model.summary()
+
+        y_pred, y_possibility = model.predict(test_loader)
+
+        y_test = []
+        for _, y in test_loader:
+            y_test += y.tolist()
+
+        print('ResNet Accuracy:', Metrics.accuracy(y_test, y_pred))
+        print('ResNet Precision, Recall, F1:', Metrics.precision_recall_f1(y_test, y_pred))
+        Metrics.plot_roc_curve(y_test, y_possibility)
 
 class TestRNN(unittest.TestCase):
     def test_rnn(self):
