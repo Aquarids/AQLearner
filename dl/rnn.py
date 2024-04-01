@@ -1,9 +1,9 @@
 import torch
 from tqdm import tqdm
 
-class SimpleRNN(torch.nn.Module):
+class rnn(torch.nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
-        super(SimpleRNN, self).__init__()
+        super(rnn, self).__init__()
         self.hidden_size = hidden_size
 
         self.W_xh = torch.nn.Parameter(torch.randn(input_size, hidden_size))
@@ -12,6 +12,8 @@ class SimpleRNN(torch.nn.Module):
 
         self.b_h = torch.nn.Parameter(torch.zeros(hidden_size))
         self.b_y = torch.nn.Parameter(torch.zeros(output_size))
+
+        self.fc = torch.nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
         batch_size, seq_len, _ = x.size()
@@ -22,7 +24,7 @@ class SimpleRNN(torch.nn.Module):
 
             h = torch.tanh(x_t @ self.W_xh + h @ self.W_hh + self.b_h)
         
-        y = torch.mm(h, self.W_hy) + self.b_y
+        y = self.fc(h)
         return y
     
     def fit(self, loader, learning_rate=0.01, n_epochs=100):
