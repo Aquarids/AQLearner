@@ -14,13 +14,13 @@ class SimpleCNNRegression(torch.nn.Module):
         x = self.fc(x)
         return x
     
-    def fit(self, train_loader, learning_rate=0.01, n_iters=1000):
+    def fit(self, loader, learning_rate=0.01, n_iters=1000):
         criterion = torch.nn.MSELoss()
         optimizer = torch.optim.SGD(self.parameters(), lr=learning_rate)
 
         progress_bar = tqdm(range(n_iters), desc="Training progress")
         for _ in progress_bar:
-            for X, y in train_loader:
+            for X, y in loader:
                 optimizer.zero_grad()
                 outputs = self.forward(X)
                 loss = criterion(outputs, y)
@@ -29,11 +29,11 @@ class SimpleCNNRegression(torch.nn.Module):
             progress_bar.update(1)
         progress_bar.close()
 
-    def predict(self, test_loader):
+    def predict(self, loader):
         self.eval()
         with torch.no_grad():
             predictions = []
-            for X, _ in test_loader:
+            for X, _ in loader:
                 predictions += self.forward(X).tolist()
             return predictions
         
