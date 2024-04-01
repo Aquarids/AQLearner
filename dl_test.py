@@ -13,6 +13,7 @@ from dl.simple_logistic_regression import SimpleLogisticRegression
 from dl.simple_cnn_classifier import SimpleCNNClassifier
 from dl.simple_cnn_regression import SimpleCNNRegression
 from dl.simple_rnn import SimpleRNN
+from dl.lstm import LSTM
 
 from sklearn.preprocessing import StandardScaler
 
@@ -142,6 +143,47 @@ class TestRNN(unittest.TestCase):
         print('SimpleRNN MSE:', Metrics.mse(np.array(y_test), np.array(y_pred)))
         y_pred_np = np.concatenate(y_pred, axis=0).flatten()
         y_test_np = np.concatenate(y_test, axis=0).flatten()
+        plt.plot(t[train_size + lock_back:], y_test_np, label='Test')
+        plt.plot(t[train_size + lock_back:], y_pred_np, label='Predict')
+        plt.legend()
+        plt.show()
+
+class TestLSTM(unittest.TestCase):
+    def test_lstm(self):
+        t = np.linspace(0, 100, 1000)
+        sin_wave = np.sin(t)
+        lock_back = 5
+
+        X, y = [], []
+        for i in range(len(sin_wave) - lock_back):
+            seq_in = sin_wave[i:i + lock_back]
+            seq_out = sin_wave[i + lock_back]
+            X.append(seq_in)
+            y.append(seq_out)
+
+        X, y = torch.FloatTensor(np.array(X)).unsqueeze(-1), torch.FloatTensor(np.array(y)).unsqueeze(-1)
+        dataset = torch.utils.data.TensorDataset(X, y)
+
+        train_size = int(0.8 * len(X))
+        test_size = len(X) - train_size
+        train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+        model = LSTM(1, 16, 1)
+        model.fit(train_loader)
+        model.summary()
+
+        y_pred = model.predict(test_loader)
+
+        y_test = []
+        for _, y in test_loader:
+            y_test += y.tolist()
+        
+        print('LSTM MSE:', Metrics.mse(np.array(y_test), np.array(y_pred)))
+        y_pred_np = np.array(y_pred)
+        y_test_np = np.array(y_test)
+
         plt.plot(t[train_size + lock_back:], y_test_np, label='Test')
         plt.plot(t[train_size + lock_back:], y_pred_np, label='Predict')
         plt.legend()
