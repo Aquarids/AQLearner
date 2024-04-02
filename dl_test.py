@@ -19,6 +19,8 @@ from dl.lstm import LSTM
 
 from sklearn.preprocessing import StandardScaler
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class TestNN(unittest.TestCase):
     def test_simple_linear_regression(self):
         X, y = sklearn.datasets.fetch_california_housing(return_X_y=True)
@@ -56,23 +58,26 @@ class TestNN(unittest.TestCase):
 
 class TestCNN(unittest.TestCase):
     def test_simple_cnn_classifier(self):
-        num_samples = 1000
         num_classes = 10
+        num_channels = 1
 
-        X = torch.rand((num_samples, 1, 28, 28))  # 1000个28x28的单通道图像
-        y_classification = torch.randint(0, num_classes, (num_samples,))
-        dataset_classification = torch.utils.data.TensorDataset(X, y_classification)
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((28, 28)),  # 确保图像大小为28x28
+            torchvision.transforms.ToTensor(),  # 将图像转换为Tensor
+            torchvision.transforms.Normalize((0.5,), (0.5,))  # 标准化
+        ])
 
-        # 划分数据集
-        train_size_classification = int(0.8 * num_samples)
-        test_size_classification = num_samples - train_size_classification
-        train_dataset_classification, test_dataset_classification = torch.utils.data.random_split(dataset_classification, [train_size_classification, test_size_classification])
+        # 下载/加载MNIST数据集
+        train_dataset = torchvision.datasets.MNIST(root='./data', train=True,
+                                                download=True, transform=transform)
+        test_dataset = torchvision.datasets.MNIST(root='./data', train=False,
+                                                download=True, transform=transform)
 
         # 创建DataLoader
-        train_loader = torch.utils.data.DataLoader(train_dataset_classification, batch_size=64, shuffle=True)
-        test_loader = torch.utils.data.DataLoader(test_dataset_classification, batch_size=64, shuffle=False)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
 
-        model = SimpleCNNClassifier()
+        model = SimpleCNNClassifier().to(device)
         model.fit(train_loader)
         model.summary()
         y_pred, y_possibility = model.predict(test_loader)
@@ -131,7 +136,7 @@ class TestResNet(unittest.TestCase):
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
 
-        model = ResNet(num_channels, num_classes)
+        model = ResNet(num_channels, num_classes).to(device)
         model.fit(train_loader)
         model.summary()
 
