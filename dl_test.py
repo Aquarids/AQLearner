@@ -7,6 +7,7 @@ import sklearn.datasets
 import sklearn.model_selection
 import torchvision.transforms
 import matplotlib.pyplot as plt
+import dl.nlp.preprocess as Preprocess
 
 from dl.simple_linear_regression import SimpleLinearRegression
 from dl.simple_logistic_regression import SimpleLogisticRegression
@@ -16,7 +17,7 @@ from dl.res_net import ResNet
 from dl.rnn import rnn
 from dl.gru import GRU
 from dl.lstm import LSTM
-from dl.seq2seq import Seq2Seq
+from dl.nlp.seq2seq import Seq2Seq
 
 from sklearn.preprocessing import StandardScaler
 
@@ -274,38 +275,6 @@ class TestLSTM(unittest.TestCase):
         plt.show()
 
 class TestSeq2Seq(unittest.TestCase):
-    def tokenize(self, data):
-        return data.lower().split(' ')
-    
-    def build_vocab(self, data):
-        vocab = {"<pad>": 0, "<sos>": 1, "<eos>": 2, "<unk>": 3}
-        index = 4
-
-        for sentence in data:
-            for word in sentence:
-                if word not in vocab:
-                    vocab[word] = index
-                    index += 1
-        return vocab
-    
-    def decode_sentence(self, indices, index_to_word, special_tokens={'<sos>', '<eos>', '<pad>', '<unk>'}):
-        words = [index_to_word.get(idx, '<unk>') for idx in indices]
-        filtered_words = [word for word in words if word not in special_tokens]
-        
-        # 如果过滤后的句子主要是<unk>，返回"unknown"
-        if len(filtered_words) == 0 or filtered_words.count('<unk>') / len(filtered_words) > 0.5:
-            return "unknown"
-        else:
-            return ' '.join(filtered_words)
-
-    def numericalize(self, sentence, vocab):
-        return [vocab.get(word.lower(), vocab["<unk>"]) for word in sentence.split()]
-    
-    def pad_sequences(self, sequences, pad_token=0):
-        max_len = max(len(seq) for seq in sequences)
-        padded_sequences = [seq + [pad_token] * (max_len - len(seq)) for seq in sequences]
-        return padded_sequences
-
     def test_seq2seq(self):
         data = [
             ("I am a student", "我 是 一 个 学生"),
@@ -320,19 +289,9 @@ class TestSeq2Seq(unittest.TestCase):
             ("What is your name", "你 叫 什么 名字")
         ]
 
-        src_data, tgt_data = [self.tokenize(d[0]) for d in data], [self.tokenize(d[1]) for d in data]
-        src_vocab, tgt_vocab = self.build_vocab(src_data), self.build_vocab(tgt_data)
+        src_numericalized, tgt_numericalized, src_vocab, tgt_vocab, index_to_src_word, index_to_tgt_word = Preprocess.preprocess_texts(data)
 
-        index_to_src_word = {index: word for word, index in src_vocab.items()}
-        index_to_tgt_word = {index: word for word, index in tgt_vocab.items()}
-
-        print("Source Vocabulary:", src_vocab)
-        print("Target Vocabulary:", tgt_vocab)
-
-        src_num = self.pad_sequences([self.numericalize(d[0], src_vocab) for d in data], src_vocab["<pad>"])
-        tgt_num = self.pad_sequences([self.numericalize(d[1], tgt_vocab) for d in data], tgt_vocab["<pad>"])
-
-        dataset = torch.utils.data.TensorDataset(torch.tensor(src_num), torch.tensor(tgt_num))
+        dataset = torch.utils.data.TensorDataset(torch.tensor(src_numericalized), torch.tensor(tgt_numericalized))
 
         train_size = int(0.8 * len(data))
         test_size = len(data) - train_size
@@ -346,19 +305,15 @@ class TestSeq2Seq(unittest.TestCase):
         model.summary()
 
         predictions = model.predict(test_loader)
-        print("Predictions:" ,predictions)
         
         for i in range(len(predictions)):
             src_sentence = test_loader.dataset[i][0].tolist()
             tgt_sentence = test_loader.dataset[i][1].tolist()
-            print("Source:", self.decode_sentence(src_sentence, index_to_src_word))
-            print("Target:", self.decode_sentence(tgt_sentence, index_to_tgt_word))
+            print("Source:", Preprocess.decode_sentence(src_sentence, index_to_src_word))
+            print("Target:", Preprocess.decode_sentence(tgt_sentence, index_to_tgt_word))
 
-            pred_indices = predictions[i].squeeze().tolist()  # 使用squeeze()移除大小为1的维度，然后转换为列表
-            # 如果pred_indices是嵌套列表（即模型返回的是批量预测），只取第一个
-            if isinstance(pred_indices[0], list):
-                pred_indices = pred_indices[0]
-            pred_sentence = self.decode_sentence(pred_indices, index_to_tgt_word)
+            prediction = predictions[i][0].tolist()
+            pred_sentence = Preprocess.decode_sentence(prediction, index_to_tgt_word)
             print("Predicted:", pred_sentence)
 
 if __name__ == '__main__':
