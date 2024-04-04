@@ -43,7 +43,7 @@ class Seq2Seq(torch.nn.Module):
         self.tgt_vocab_size = tgt_vocab_size
 
     def fit(self, loader, learning_rate=0.01, epochs=10):
-        criterion = torch.nn.CrossEntropyLoss()
+        criterion = torch.nn.CrossEntropyLoss(ignore_index=0)
         optimizer = torch.optim.SGD(self.parameters(), lr=learning_rate)
         self.train()
 
@@ -67,17 +67,17 @@ class Seq2Seq(torch.nn.Module):
             progress_bar.update(1)
         progress_bar.close()
 
-    def predict(self, src_loader, num_max_predictions=100):
+    def predict(self, src_loader, max_length=100):
         self.eval()
         predictions = []
         with torch.no_grad():
             for src, _ in src_loader:
                 src = src.transpose(0, 1)
                 _, hidden, cell = self.encoder(src)
-                outputs = torch.zeros(src.shape[1], num_max_predictions).to(src.device)
+                outputs = torch.zeros(src.shape[1], max_length).to(src.device)
                 input = torch.tensor([1], device=src.device)  # <sos> 的索引
 
-                for t in range(num_max_predictions):
+                for t in range(max_length):
                     output, hidden, cell = self.decoder(input, hidden, cell)
                     top1 = output.argmax(1)
                     outputs[:, t] = top1

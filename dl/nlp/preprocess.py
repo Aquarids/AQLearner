@@ -40,7 +40,7 @@ def add_sos_eos(numericialzed_text):
 def pad_sequence(numericialzed_text, max_length):
     return numericialzed_text + [pad_token] * (max_length - len(numericialzed_text))
 
-def preprocess_texts(data):
+def preprocess_texts(data, max_length=10):
     src_data_tokenized, tgt_data_tokenized = [tokenize(d[0], language_en) for d in data], [tokenize(d[1], language_zh) for d in data]
     src_vocab, tgt_vocab = build_vocab(src_data_tokenized), build_vocab(tgt_data_tokenized)
 
@@ -50,7 +50,6 @@ def preprocess_texts(data):
     print("Source Vocabulary:", src_vocab)
     print("Target Vocabulary:", tgt_vocab)
 
-    max_length = 10
     src_numericalized = []
     tgt_numericalized = []
     for d in data:

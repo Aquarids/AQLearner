@@ -18,6 +18,7 @@ from dl.rnn import rnn
 from dl.gru import GRU
 from dl.lstm import LSTM
 from dl.nlp.seq2seq import Seq2Seq
+from dl.nlp.transformer import Transformer
 
 from sklearn.preprocessing import StandardScaler
 
@@ -289,7 +290,8 @@ class TestSeq2Seq(unittest.TestCase):
             ("What is your name", "你 叫 什么 名字")
         ]
 
-        src_numericalized, tgt_numericalized, src_vocab, tgt_vocab, index_to_src_word, index_to_tgt_word = Preprocess.preprocess_texts(data)
+        max_length = 10
+        src_numericalized, tgt_numericalized, src_vocab, tgt_vocab, index_to_src_word, index_to_tgt_word = Preprocess.preprocess_texts(data, max_length)
 
         dataset = torch.utils.data.TensorDataset(torch.tensor(src_numericalized), torch.tensor(tgt_numericalized))
 
@@ -304,7 +306,50 @@ class TestSeq2Seq(unittest.TestCase):
         model.fit(train_loader)
         model.summary()
 
-        predictions = model.predict(test_loader)
+        predictions = model.predict(test_loader, max_length)
+        
+        for i in range(len(predictions)):
+            src_sentence = test_loader.dataset[i][0].tolist()
+            tgt_sentence = test_loader.dataset[i][1].tolist()
+            print("Source:", Preprocess.decode_sentence(src_sentence, index_to_src_word))
+            print("Target:", Preprocess.decode_sentence(tgt_sentence, index_to_tgt_word))
+
+            prediction = predictions[i][0].tolist()
+            pred_sentence = Preprocess.decode_sentence(prediction, index_to_tgt_word)
+            print("Predicted:", pred_sentence)
+
+class TestTransformer(unittest.TestCase):
+    def test_transformer(self):
+        data = [
+            ("I am a student", "我 是 一 个 学生"),
+            ("He is a teacher", "他 是 一 名 教师"),
+            ("I love you", "我 爱 你"),
+            ("I miss you", "我 想 你"),
+            ("I am a programmer", "我 是 一 名 程序员"),
+            ("I am a data scientist", "我 是 一名 数据 科学家"),
+            ("I am a machine learning engineer", "我 是 一 名 机器 学习 工程师"),
+            ("I am a deep learning engineer", "我 是 一 名 深度 学习 工程师"),
+            ("I am a software engineer", "我 是 一 名 软件 工程师"),
+            ("What is your name", "你 叫 什么 名字")
+        ]
+
+        max_length = 10
+        src_numericalized, tgt_numericalized, src_vocab, tgt_vocab, index_to_src_word, index_to_tgt_word = Preprocess.preprocess_texts(data, max_length)
+
+        dataset = torch.utils.data.TensorDataset(torch.tensor(src_numericalized), torch.tensor(tgt_numericalized))
+
+        train_size = int(0.8 * len(data))
+        test_size = len(data) - train_size
+        train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=1, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False)
+
+        model = Transformer(len(src_vocab), len(tgt_vocab), d_model=512, num_heads=8, num_layers=6, ff_hidden_dim=2048, dropout=0.1)
+        model.fit(train_loader)
+        model.summary()
+
+        predictions = model.predict(test_loader, max_length)
         
         for i in range(len(predictions)):
             src_sentence = test_loader.dataset[i][0].tolist()
