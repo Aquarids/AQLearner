@@ -1,4 +1,4 @@
-from crypto.ot.diffie_hellman import DiffieHellman
+from crypto.diffie_hellman import DiffieHellman
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 
@@ -34,10 +34,11 @@ class OTReceiver:
     def get_public_key(self):
         return self.dh.get_public_key()
         
-    def decrypt(self, encrypted_messages, sender_public_keys):
-        if len(encrypted_messages) != 2 or len(sender_public_keys) != 2:
+    def decrypt(self, encrypted_messages, sender_public_key):
+        if len(encrypted_messages) != 2:
             raise ValueError("Only support 1 out of 2 OT")
-        shared_secret = self.dh.get_shared_secret(sender_public_keys[self.choice])
+        
+        shared_secret = self.dh.get_shared_secret(sender_public_key)
         cipher = AES.new(shared_secret, AES.MODE_CBC, encrypted_messages[self.choice][1])
         decrypted_message = unpad(cipher.decrypt(encrypted_messages[self.choice][0]), AES.block_size).decode('utf-8')
         try:

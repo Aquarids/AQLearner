@@ -1,7 +1,19 @@
 import unittest
 import Crypto.Util.number
+import random
 
-from crypto.ot.oblivious_transfer import OTSender, OTReceiver
+from crypto.zero_knowledge_proof import ZeroKnowledgeProof
+from crypto.oblivious_transfer import OTSender, OTReceiver
+from crypto.zero_knowledge_proof import ZeroKnowledgeProof
+
+class TestZeroKnowledgeProof(unittest.TestCase):
+    def test_zkp(self):
+        secret, r = random.randint(1, 100), random.randint(1, 100)
+        zkp = ZeroKnowledgeProof(secret, r)
+
+        challenge_type = zkp.challenge()
+        response = zkp.response(challenge_type)
+        self.assertTrue(zkp.verify(challenge_type, response))
 
 class TestObliviousTransfer(unittest.TestCase):
     def test_ot(self):
@@ -9,8 +21,9 @@ class TestObliviousTransfer(unittest.TestCase):
         messages = ["Hello", "World"]
 
         sender = OTSender(p, g, messages)
-        choices = 1 # 0 or 1
-        receiver = OTReceiver(p, g, choices)
+        choice = 1 # 0 or 1
+
+        receiver = OTReceiver(p, g, choice)
 
         sender_publickeys = sender.get_public_keys()
         receiver_publickey = receiver.get_public_key()
@@ -20,6 +33,12 @@ class TestObliviousTransfer(unittest.TestCase):
         encryped_messages = sender.encrypt(receiver_publickey)
         print("Encrypted Messages:", encryped_messages)
 
-        decrypted_message, cannot_decrypt_message = receiver.decrypt(encryped_messages, sender_publickeys)
+        # here should ensure receiver can only get the message he wants and sender do not know which message receiver get
+        sender_publickey = sender_publickeys[choice] 
+        decrypted_message, cannot_decrypt_message = receiver.decrypt(encryped_messages, sender_publickey)
         print("Decrypted Message:", decrypted_message)
         print("Cannot Decrypt Message:", cannot_decrypt_message)
+        self.assertEqual(messages[choice], decrypted_message)
+
+if __name__ == '__main__':
+    unittest.main()
