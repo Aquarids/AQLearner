@@ -49,7 +49,7 @@ class SecretShare:
 
         return self._undo_convert_secret(secret)
         
-class TwoOutOfNSecretShare(SecretShare):
+class ShamirSecretShare(SecretShare):
     def __init__(self, num_shares, prime):
         self.num_shares = num_shares
         self.secret_type = None

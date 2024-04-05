@@ -6,7 +6,7 @@ from crypto.zero_knowledge_proof import ZeroKnowledgeProof
 from crypto.oblivious_transfer import OTSender, OTReceiver
 from crypto.garbled_circuit import GarbledCircuit
 from crypto.secret_share import SecretShare
-from crypto.secret_share import TwoOutOfNSecretShare
+from crypto.secret_share import ShamirSecretShare
 
 
 class TestZeroKnowledgeProof(unittest.TestCase):
@@ -102,7 +102,7 @@ class TestSecretShare(unittest.TestCase):
     
     def test_two_out_of_n_secret_share(self):
         prime = Crypto.Util.number.getPrime(512)
-        secret_share = TwoOutOfNSecretShare(num_shares=5, prime=prime)
+        secret_share = ShamirSecretShare(num_shares=5, prime=prime)
         secret = "This is a secret message."
         print("Original Secret:", secret)
 
