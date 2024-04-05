@@ -5,6 +5,8 @@ import random
 from crypto.zero_knowledge_proof import ZeroKnowledgeProof
 from crypto.oblivious_transfer import OTSender, OTReceiver
 from crypto.garbled_circuit import GarbledCircuit
+from crypto.secret_share import SecretShare
+from crypto.secret_share import TwoOutOfNSecretShare
 
 
 class TestZeroKnowledgeProof(unittest.TestCase):
@@ -83,6 +85,33 @@ class TestGarbledCircuit(unittest.TestCase):
             self.assertEqual(result, 1)
         else:
             self.assertEqual(result, 0)
+
+class TestSecretShare(unittest.TestCase):
+    def test_secret_share(self):
+        secret_share = SecretShare(num_shares=5)
+        secret = random.randint(1, 100)
+        print("Original Secret:", secret)
+
+        shares = secret_share.generate_shares(secret)
+        print("Shares:", shares)
+
+        recovered_secret = secret_share.recover_secret(shares)
+        print("Recovered Secret:", recovered_secret)
+
+        self.assertEqual(secret, recovered_secret)
+    
+    def test_two_out_of_n_secret_share(self):
+        prime = Crypto.Util.number.getPrime(512)
+        secret_share = TwoOutOfNSecretShare(num_shares=5, prime=prime)
+        secret = "This is a secret message."
+        print("Original Secret:", secret)
+
+        shares = secret_share.generate_shares(secret)
+        print("Shares:", shares)
+
+        recovered_shares = random.sample(shares, 2)
+        recovered_secret = secret_share.recover_secret(recovered_shares)
+        print("Recovered Secret:", recovered_secret)
 
 if __name__ == '__main__':
     unittest.main()
