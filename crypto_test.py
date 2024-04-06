@@ -9,6 +9,7 @@ from crypto.secret_share import SecretShare
 from crypto.secret_share import ShamirSecretShare
 from crypto.homo_encryption import AddHomomorphicEncryption
 from crypto.homo_encryption import ElGamalHE
+from crypto.smpc import SMPCParty, SMPCCenter
 
 class TestZeroKnowledgeProof(unittest.TestCase):
     def test_zkp(self):
@@ -129,6 +130,8 @@ class TestHomomorphicEncryption(unittest.TestCase):
         print("Encrypted Sum:", encrypted_sum)
         decrypted_sum = he.decrypt(encrypted_sum)
         print("Decrypted Sum:", decrypted_sum)
+        expected_value = a + b + c
+        print("Expected Value:", expected_value)
         self.assertEqual(a + b + c, decrypted_sum)
 
     def test_elgamal_homomorphic_encryption(self):
@@ -143,7 +146,32 @@ class TestHomomorphicEncryption(unittest.TestCase):
         print("Encrypted Product:", encrypted_product)
         decrypted_product = he.decrypt(encrypted_product)
         print("Decrypted Product:", decrypted_product)
+        expected_value = a * b
+        print("Expected Value:", expected_value)
         self.assertEqual(a * b, decrypted_product)
+
+class TestSMPC(unittest.TestCase):
+    def test_smpc(self):
+        bits = 256
+        smpc_center = SMPCCenter(bits=bits)
+        public_key = smpc_center.get_public_key()
+        print("Public Key:", public_key)
+
+        parties = [SMPCParty(random.randint(1, 100), public_key) for _ in range(5)]
+        encrypted_inputs = [party.encrypt_input() for party in parties]
+        print("Encrypted Inputs:", encrypted_inputs)
+
+        agg_c1, agg_c2 = smpc_center.aggregate_encrypted_inputs(encrypted_inputs)
+        print("Aggregated Encrypted Inputs:", agg_c1, agg_c2)
+
+        decrypted_output = smpc_center.decrypt((agg_c1, agg_c2))
+        print("Decrypted Output:", decrypted_output)
+
+        expected_output = 1
+        for party in parties:
+            expected_output *= party.value
+        print("Expected Output:", expected_output)
+        self.assertEqual(expected_output, decrypted_output)
 
 
 if __name__ == '__main__':

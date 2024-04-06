@@ -21,8 +21,13 @@ class ElGamalHE:
         self.bits = bits
         self.p = Crypto.Util.number.getPrime(bits)
         self.g = random.randint(2, self.p - 1)
-        self.x = random.randint(2, self.p - 1)
-        self.y = pow(self.g, self.x, self.p)
+        self.x = random.randint(2, self.p - 1) # private key
+        self.y = pow(self.g, self.x, self.p) # public key
+
+    def __init__(self, elgamal_public_key, elgamal_private_key=None):
+        self.g, self.p, self.y = elgamal_public_key
+        self.x = elgamal_private_key
+        return 
 
     def encrypt(self, value):
         k = random.randint(2, self.p - 1)
