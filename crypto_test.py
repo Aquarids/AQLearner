@@ -7,7 +7,8 @@ from crypto.oblivious_transfer import OTSender, OTReceiver
 from crypto.garbled_circuit import GarbledCircuit
 from crypto.secret_share import SecretShare
 from crypto.secret_share import ShamirSecretShare
-
+from crypto.homo_encryption import AddHomomorphicEncryption
+from crypto.homo_encryption import ElGamalHE
 
 class TestZeroKnowledgeProof(unittest.TestCase):
     def test_zkp(self):
@@ -112,6 +113,38 @@ class TestSecretShare(unittest.TestCase):
         recovered_shares = random.sample(shares, 2)
         recovered_secret = secret_share.recover_secret(recovered_shares)
         print("Recovered Secret:", recovered_secret)
+
+class TestHomomorphicEncryption(unittest.TestCase):
+    def test_homomorphic_encryption(self):
+
+        he = AddHomomorphicEncryption()
+
+        a, b, c = random.randint(1, 100), random.randint(1, 100), random.randint(1, 100)
+        encrypted_a, encrypted_b, encrypted_c = he.encrypt(a), he.encrypt(b), he.encrypt(c)
+        print("Encrypted A:", encrypted_a)
+        print("Encrypted B:", encrypted_b)
+        print("Encrypted C:", encrypted_c)
+
+        encrypted_sum = he.add([encrypted_a, encrypted_b, encrypted_c])
+        print("Encrypted Sum:", encrypted_sum)
+        decrypted_sum = he.decrypt(encrypted_sum)
+        print("Decrypted Sum:", decrypted_sum)
+        self.assertEqual(a + b + c, decrypted_sum)
+
+    def test_elgamal_homomorphic_encryption(self):
+        he = ElGamalHE(bits=512)
+
+        a, b = random.randint(1, 100), random.randint(1, 100)
+        encrypted_a, encrypted_b = he.encrypt(a), he.encrypt(b)
+        print("Encrypted A:", encrypted_a)
+        print("Encrypted B:", encrypted_b)
+
+        encrypted_product = he.multiply(encrypted_a, encrypted_b)
+        print("Encrypted Product:", encrypted_product)
+        decrypted_product = he.decrypt(encrypted_product)
+        print("Decrypted Product:", decrypted_product)
+        self.assertEqual(a * b, decrypted_product)
+
 
 if __name__ == '__main__':
     unittest.main()
