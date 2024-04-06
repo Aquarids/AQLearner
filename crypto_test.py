@@ -1,6 +1,7 @@
 import unittest
 import Crypto.Util.number
 import random
+import numpy as np
 
 from crypto.zero_knowledge_proof import ZeroKnowledgeProof
 from crypto.oblivious_transfer import OTSender, OTReceiver
@@ -173,6 +174,26 @@ class TestSMPC(unittest.TestCase):
         print("Expected Output:", expected_output)
         self.assertEqual(expected_output, decrypted_output)
 
+class TestDiffPrivacy(unittest.TestCase):
+    def test_diff_privacy(self):
+        true_counts = np.random.randint(100, 200, size=100)
+
+        epsolon = 1
+        sensitivity = 1
+        dp_counts = [count + np.random.laplace(loc=0, scale=sensitivity / epsolon, size=100) for count in true_counts]
+        print("DP Counts:", dp_counts)
+
+        true_avg = np.mean(true_counts)
+        dp_avg = np.mean(dp_counts)
+        print("True Average:", true_avg)
+        print("DP Average:", dp_avg)
+        print("Difference:", abs(true_avg - dp_avg))
+
+        true_var = np.var(true_counts)
+        dp_var = np.var(dp_counts)
+        print("True Variance:", true_var)
+        print("DP Variance:", dp_var)
+        print("Difference:", abs(true_var - dp_var))
 
 if __name__ == '__main__':
     unittest.main()
