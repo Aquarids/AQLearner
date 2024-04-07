@@ -83,7 +83,7 @@ class TestCNN(unittest.TestCase):
         model = SimpleCNNClassifier().to(device)
         model.fit(train_loader)
         model.summary()
-        y_pred, y_possibility = model.predict(test_loader)
+        y_pred, y_prob = model.predict(test_loader)
 
         y_test = []
         for _, y in test_loader:
@@ -91,7 +91,6 @@ class TestCNN(unittest.TestCase):
         
         print('SimpleCNNClassifier Accuracy:', Metrics.accuracy(y_test, y_pred))
         print('SimpleCNNClassifier Precision, Recall, F1:', Metrics.precision_recall_f1(y_test, y_pred))
-        Metrics.plot_roc_curve(y_test, y_possibility)
 
     def test_simple_cnn_regression(self):
         num_samples = 1000
@@ -143,7 +142,7 @@ class TestResNet(unittest.TestCase):
         model.fit(train_loader)
         model.summary()
 
-        y_pred, y_possibility = model.predict(test_loader)
+        y_pred, y_prob = model.predict(test_loader)
 
         y_test = []
         for _, y in test_loader:
@@ -151,7 +150,6 @@ class TestResNet(unittest.TestCase):
 
         print('ResNet Accuracy:', Metrics.accuracy(y_test, y_pred))
         print('ResNet Precision, Recall, F1:', Metrics.precision_recall_f1(y_test, y_pred))
-        Metrics.plot_roc_curve(y_test, y_possibility)
 
 class TestRNN(unittest.TestCase):
     def test_rnn(self):

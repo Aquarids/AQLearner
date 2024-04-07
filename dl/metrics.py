@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 def accuracy(y_test, y_pred):
     return np.sum(y_test == y_pred) / len(y_test)
@@ -31,6 +32,7 @@ def auc(y_true, y_prob):
     thresholds = np.sort(np.unique(y_prob))[::-1]
     auc = 0
     tpr_prev = 0
+    fpr_prev = 0
     for threshold in thresholds:
         y_pred = np.where(y_prob >= threshold, 1, 0)
         tpr, fpr = tpr_fpr(y_true, y_pred)
@@ -39,7 +41,7 @@ def auc(y_true, y_prob):
         fpr_prev = fpr
     return auc
 
-def plot_roc_curve(y_true, y_prob):
+def plot_roc_curve(y_true, y_prob, show=True):
     thresholds = np.sort(np.unique(y_prob))[::-1]
     tpr_list = []
     fpr_list = []
@@ -52,5 +54,15 @@ def plot_roc_curve(y_true, y_prob):
     plt.xlabel('FPR')
     plt.ylabel('TPR')
     plt.title('ROC Curve')
-    plt.show()
+    if show:
+        plt.show()
+    return plt
 
+def save_roc_curve(y_true, y_prob, filename, dir):
+    plt = plot_roc_curve(y_true, y_prob, show=False)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    filepath = os.path.join(dir, filename)
+    plt.savefig(filepath)
+    plt.close()
+    return os.path.abspath(filepath)
