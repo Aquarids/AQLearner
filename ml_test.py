@@ -14,6 +14,7 @@ from ml.bayes.naive_bayes import NaiveBayesClassifier
 from ml.bayes.gaussian_naive_bayes import GaussianNaiveBayesClassifier
 from ml.ensemble.adaboost import AdaBoost
 from ml.ensemble.random_forest import RandomForest
+from ml.pca.pca import EVD, SVD
 
 import sklearn.datasets as datasets
 import sklearn.model_selection
@@ -210,6 +211,27 @@ class TestEnsmbleLearning(unittest.TestCase):
 
         y_pred = model.predict(test_X)
         print('Random Forest Accuracy:', model.accuracy_score(test_y, y_pred))
+
+class TestPCA(unittest.TestCase):
+    def test_evd(self):
+        X, _ = datasets.load_iris(return_X_y=True)
+        train_X, test_X = sklearn.model_selection.train_test_split(X, test_size=0.2, random_state=42)
+
+        model = EVD(n_components=2)
+        model.fit(train_X)
+
+        reduced_X = model.predict(test_X)
+        print('EVD Reduced Data:', reduced_X)
+
+    def test_svd(self):
+        X, _ = datasets.load_iris(return_X_y=True)
+        train_X, test_X = sklearn.model_selection.train_test_split(X, test_size=0.2, random_state=42)
+
+        model = SVD(n_components=2)
+        model.fit(train_X)
+
+        reduced_X = model.predict(test_X)
+        print('SVD Reduced Data:', reduced_X)
 
 if __name__ == '__main__':
     unittest.main()
