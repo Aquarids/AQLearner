@@ -1,7 +1,8 @@
 import torch
 
 from tqdm import tqdm
-from fl.model_metric import ModelMetric, type_regresion, type_binary_classification, type_multi_classification
+from fl.model_metric import ModelMetric
+from fl.model_factory import type_regresion, type_binary_classification, type_multi_classification
 
 class Server:
     def __init__(self, model: torch.nn.Module, optimizer, criterion, type=type_regresion):

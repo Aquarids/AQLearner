@@ -7,17 +7,42 @@ import sklearn.preprocessing
 
 from fl.client import Client
 from fl.server import Server
-from fl.model_metric import type_regresion, type_binary_classification, type_multi_classification
+from fl.model_factory import ModelFactory
 
-class TestFL(unittest.TestCase):
-    class SimpleLinearRegressionModel(torch.nn.Module):
-        def __init__(self, n_features):
-            super(TestFL.SimpleLinearRegressionModel, self).__init__()
-            self.fc = torch.nn.Linear(n_features, 1)
+class TestModelFactory(unittest.TestCase):
+    def test_model_factory(self):
+        model_factory = ModelFactory()
+        model_params = {
+            "model_type": "regression",
+            "learning_rate": 0.001,
+            "optimizer": "sgd",
+            "criterion": "mse",
+            "layers": [
+                {
+                    "type": "linear",
+                    "in_features": 10,
+                    "out_features": 5
+                },
+                {
+                    "type": "linear",
+                    "in_features": 5,
+                    "out_features": 1
+                }
+            ]
+        }
+        model, model_type, optimizer, criterion = model_factory.create_model(model_params)
         
-        def forward(self, x):
-            return self.fc(x)
-        
+        print("Model Type: ", model_type)
+        print("Model Detail: ", model)        
+        total_params = sum(p.numel() for p in model.parameters())
+        print(f"Total Parameters: {total_params}")
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                print(f"Layer: {name}, Size: {param.size()}, Values: {param.data}")
+        print("Optimizer: ", optimizer)
+        print("criterion: ", criterion)
+
+class TestFL(unittest.TestCase):        
     class SimpleLinearClassificationModel(torch.nn.Module):
         def __init__(self, n_features):
             super(TestFL.SimpleLinearClassificationModel, self).__init__()
@@ -52,12 +77,23 @@ class TestFL(unittest.TestCase):
         X, y = torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32).view(-1, 1)
         X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=0.1, random_state=20)
 
-        model = TestFL.SimpleLinearRegressionModel(n_features=X.shape[1])
-        criterion = torch.nn.MSELoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+        model_json = {
+            "model_type": "regression",
+            "learning_rate": 0.01,
+            "optimizer": "adam",
+            "criterion": "mse",
+            "layers": [
+                {
+                    "type": "linear",
+                    "in_features": X.shape[1],
+                    "out_features": 1
+                }
+            ]
+        }
+        model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
 
         n_clients = 10
-        server = Server(model, optimizer, criterion, type=type_regresion)
+        server = Server(model, optimizer, criterion, type=model_type)
         clients = [Client(model, criterion, optimizer) for _ in range(n_clients)]
 
         n_rounds = 10
@@ -78,12 +114,26 @@ class TestFL(unittest.TestCase):
         X, y = torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32).view(-1, 1)
         X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=0.1, random_state=42)
 
-        model = TestFL.SimpleLinearClassificationModel(n_features=X.shape[1])
-        criterion = torch.nn.BCELoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+        model_json = {
+            "model_type": "binary_classification",
+            "learning_rate": 0.01,
+            "optimizer": "adam",
+            "criterion": "bce",
+            "layers": [
+                {
+                    "type": "linear",
+                    "in_features": X.shape[1],
+                    "out_features": 1
+                },
+                {
+                    "type": "sigmoid"
+                }
+            ]
+        }
+        model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
 
         n_clients = 10
-        server = Server(model, optimizer, criterion, type=type_binary_classification)
+        server = Server(model, optimizer, criterion, type=model_type)
         clients = [Client(model, criterion, optimizer) for _ in range(n_clients)]
 
         n_rounds = 5
@@ -98,7 +148,6 @@ class TestFL(unittest.TestCase):
         server.train(n_rounds, clients)
         
         server.summary()
-
 
 if __name__ == '__main__':
     unittest.main()

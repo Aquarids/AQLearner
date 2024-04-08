@@ -4,9 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-type_regresion = "regression"
-type_binary_classification = "binary_classification"
-type_multi_classification = "multi_classification"
+from fl.model_factory import type_regresion, type_binary_classification, type_multi_classification
 
 class ModelMetric:
     def __init__(self, type) -> None:
