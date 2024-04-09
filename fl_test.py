@@ -93,8 +93,8 @@ class TestFL(unittest.TestCase):
         model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
 
         n_clients = 10
-        server = Server(model, optimizer, criterion, type=model_type)
         clients = [Client(model, criterion, optimizer) for _ in range(n_clients)]
+        server = Server(model, optimizer, criterion, type=model_type, clients=clients, encrypt=True)
 
         n_rounds = 10
         n_batch_size = 100
@@ -105,7 +105,7 @@ class TestFL(unittest.TestCase):
             clients[client_id].setDataLoader(train_loader_clients[client_id], n_batch_size, n_rounds, n_iter)
         
         server.setTestLoader(torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, y_test), batch_size=n_batch_size, shuffle=True))
-        server.train(n_rounds, clients)
+        server.train(n_rounds)
         
         server.summary()
 
@@ -133,8 +133,8 @@ class TestFL(unittest.TestCase):
         model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
 
         n_clients = 10
-        server = Server(model, optimizer, criterion, type=model_type)
         clients = [Client(model, criterion, optimizer) for _ in range(n_clients)]
+        server = Server(model, optimizer, criterion, type=model_type, clients=clients, encrypt=True)
 
         n_rounds = 5
         n_batch_size = 2
@@ -145,7 +145,7 @@ class TestFL(unittest.TestCase):
             clients[client_id].setDataLoader(train_loader_clients[client_id], n_rounds, n_batch_size, n_iter)
         
         server.setTestLoader(torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, y_test), batch_size=n_batch_size, shuffle=True))
-        server.train(n_rounds, clients)
+        server.train(n_rounds)
         
         server.summary()
 

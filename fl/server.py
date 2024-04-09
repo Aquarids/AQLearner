@@ -1,31 +1,66 @@
 import torch
+import random
 
 from tqdm import tqdm
+from fl.client import Client
 from fl.model_metric import ModelMetric
 from fl.model_factory import type_regresion, type_binary_classification, type_multi_classification
 
 class Server:
-    def __init__(self, model: torch.nn.Module, optimizer, criterion, type=type_regresion):
+    def __init__(self, model: torch.nn.Module, optimizer, criterion, type=type_regresion, clients=[], encrypt=False):
+        if len(clients) == 0:
+            raise ValueError("Clients can not be empty")
         self.model = model
         self.optimizer = optimizer
         self.criterion = criterion
         self.type = type
         self.model_metric = ModelMetric(type)
-
+        self.clients = clients
+        self.n_clients = len(clients)
+        self.encrypt = encrypt
+        self.noises = []
+        if encrypt:
+            self._setNoise()
+    
     # for evaluating model after each round
     def setTestLoader(self, test_loader):
         self.test_loader = test_loader
 
-    def train(self, n_rounds, clients):
+    def _setNoise(self):
+        self.noises = []
+        for client in self.clients:
+            noise = random.random()
+            client.setGradientNoise(noise)
+            self.noises.append(noise)
+
+    def decrypt_sum_gradients(self, gradients):
+        decrypted_gradients = []
+        summed_noises = sum(self.noises)
+        for grad in gradients:
+            grad -= summed_noises
+            decrypted_gradients.append(grad)
+        return decrypted_gradients
+
+    def train(self, n_rounds):
         self.model_metric.reset()
-        n_clients = len(clients)
-        progress_bar = tqdm(range(n_rounds * n_clients), desc="Training progress")
+        progress_bar = tqdm(range(n_rounds * self.n_clients), desc="Training progress")
         for round_idx in range(n_rounds):
             gradients = []
-            for client_id in range(n_clients):
-                client = clients[client_id]
+            previous_client = None
+            for client_id in range(self.n_clients):
+                client: Client = self.clients[client_id]
                 client.train(round_idx)
-                gradients.append(client.get_gradients())
+
+                # sum gradients from previous client, this action should not be bone in server class, here just for showing the idea
+                previous_gradients = None
+                if previous_client is not None:
+                    previous_gradients = previous_client.get_summed_gradients()
+                client.sum_gradients(previous_gradients)
+
+                # get sum of gradients from last client, thus server do not know each client's gradient
+                if client_id == self.n_clients - 1:
+                    gradients = client.get_summed_gradients()
+                previous_client = client
                 progress_bar.update(1)
             self.aggretate_gradients(gradients)
 
@@ -41,11 +76,12 @@ class Server:
         if gradients is None:
             return
         
-        n_clients = len(gradients)
+        if self.encrypt:
+            decrypted_sum_gradients = self.decrypt_sum_gradients(gradients)
 
         avg_grad = []
-        for grads in zip(*gradients):
-            avg_grad.append(torch.stack(grads).sum(0) / n_clients)
+        for grad in decrypted_sum_gradients:
+            avg_grad.append(grad / self.n_clients)
         
         for param, grad in zip(self.model.parameters(), avg_grad):
             param.grad = grad
@@ -78,7 +114,8 @@ class Server:
         
     def summary(self):
         self.model_metric.summary()
-        print("Global model: ", self.model)        
+        print("Global model: ", self.model)  
+        print("Client Gradients Noise: ", self.noises)      
         total_params = sum(p.numel() for p in self.model.parameters())
         print(f"Total Parameters: {total_params}")
         for name, param in self.model.named_parameters():

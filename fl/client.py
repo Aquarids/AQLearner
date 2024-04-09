@@ -8,6 +8,11 @@ class Client:
         self.optimizer = optimizer
         self.train_loaders = []
         self.n_rounds = 0
+        self.gradient_noise = 0
+        self.summed_gradients = None
+
+    def setGradientNoise(self, noise):
+        self.gradient_noise = noise
 
     def setDataLoader(self, train_loader, n_rounds, n_batch_size=100, n_iters=10):
         self.n_rounds = n_rounds
@@ -44,8 +49,25 @@ class Client:
                 loss.backward()
                 self.optimizer.step()
 
+    def _encrypt_gradient(self, gradient):
+        return gradient + self.gradient_noise
+    
+    # sum other clients' gradients with noise
+    def sum_gradients(self, previous_gradients):
+        cur_gradients = [self._encrypt_gradient(param.grad) for param in self.model.parameters()]
+        if previous_gradients is None:
+            self.summed_gradients = cur_gradients
+        else:
+            self.summed_gradients = [cur_grad + prev_grad for cur_grad, prev_grad in zip(cur_gradients, previous_gradients)]
+
+        return self.summed_gradients
+    
+    # just for verifying the sum gradients, should not be used
     def get_gradients(self):
         return [param.grad for param in self.model.parameters()]
+
+    def get_summed_gradients(self):
+        return self.summed_gradients
     
     def update_model(self, new_model):
         self.model.load_state_dict(new_model.state_dict())
