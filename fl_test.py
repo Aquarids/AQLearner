@@ -90,11 +90,17 @@ class TestFL(unittest.TestCase):
                 }
             ]
         }
-        model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
 
         n_clients = 10
-        clients = [Client(model, criterion, optimizer) for _ in range(n_clients)]
-        server = Server(model, optimizer, criterion, type=model_type, clients=clients, encrypt=True)
+        clients = []
+        for i in range(n_clients):
+            # each client should have its own model
+            model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
+            client = Client(model, criterion, optimizer)
+            clients.append(client)
+
+        model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
+        server = Server(model, optimizer, criterion, type=model_type, clients=clients)
 
         n_rounds = 10
         n_batch_size = 100
@@ -133,8 +139,15 @@ class TestFL(unittest.TestCase):
         model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
 
         n_clients = 10
-        clients = [Client(model, criterion, optimizer) for _ in range(n_clients)]
-        server = Server(model, optimizer, criterion, type=model_type, clients=clients, encrypt=True)
+        clients = []
+        for i in range(n_clients):
+            # each client should have its own model
+            model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
+            client = Client(model, criterion, optimizer)
+            clients.append(client)
+
+        model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
+        server = Server(model, optimizer, criterion, type=model_type, clients=clients)
 
         n_rounds = 5
         n_batch_size = 2

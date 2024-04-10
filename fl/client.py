@@ -1,6 +1,8 @@
 import torch
 import torch.utils.data
 
+from fl.encryptor import Encryptor
+
 class Client:
     def __init__(self, model: torch.nn.Module, criterion, optimizer):
         self.model = model
@@ -8,11 +10,8 @@ class Client:
         self.optimizer = optimizer
         self.train_loaders = []
         self.n_rounds = 0
-        self.gradient_noise = 0
-        self.summed_gradients = None
 
-    def setGradientNoise(self, noise):
-        self.gradient_noise = noise
+        self.encryptor = Encryptor(range=1)
 
     def setDataLoader(self, train_loader, n_rounds, n_batch_size=100, n_iters=10):
         self.n_rounds = n_rounds
@@ -41,6 +40,7 @@ class Client:
     def train(self, round_idx=0):
         self.model.train()
         train_loader = self.train_loaders[round_idx]
+
         for _ in range(self.n_iters):
             for X_batch, y_batch in train_loader:
                 self.optimizer.zero_grad()
@@ -48,26 +48,21 @@ class Client:
                 loss = self.criterion(output, y_batch)
                 loss.backward()
                 self.optimizer.step()
-
-    def _encrypt_gradient(self, gradient):
-        return gradient + self.gradient_noise
     
     # sum other clients' gradients with noise
     def sum_gradients(self, previous_gradients):
-        cur_gradients = [self._encrypt_gradient(param.grad) for param in self.model.parameters()]
-        if previous_gradients is None:
-            self.summed_gradients = cur_gradients
-        else:
-            self.summed_gradients = [cur_grad + prev_grad for cur_grad, prev_grad in zip(cur_gradients, previous_gradients)]
-
-        return self.summed_gradients
+        self.encryptor.sum_encrpted_grads(previous_gradients, list(self.model.parameters()))
     
     # just for verifying the sum gradients, should not be used
-    def get_gradients(self):
-        return [param.grad for param in self.model.parameters()]
+    def get_original_gradients(self):
+        grads = [param.grad for param in self.model.parameters()]
+        return grads
+
+    def get_noise(self):
+        return self.encryptor.get_noise()
 
     def get_summed_gradients(self):
-        return self.summed_gradients
+        return self.encryptor.get_summed_grads()
     
     def update_model(self, new_model):
         self.model.load_state_dict(new_model.state_dict())
