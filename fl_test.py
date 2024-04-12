@@ -8,6 +8,7 @@ import sklearn.preprocessing
 from fl.client import Client
 from fl.server import Server
 from fl.model_factory import ModelFactory
+from fl.psi import SimplePSI
 
 class TestModelFactory(unittest.TestCase):
     def test_model_factory(self):
@@ -161,6 +162,22 @@ class TestFL(unittest.TestCase):
         server.train(n_rounds)
         
         server.summary()
+
+class TestPSI(unittest.TestCase):
+    def test_psi(self):
+        client_features = {
+            "client_1": {"age", "height", "weight"},
+            "client_2": {"height", "weight", "blood_type"},
+        }
+
+        # assume client_1 ask client_2 for the intersection of features
+        psi = SimplePSI()
+        psi.build_dic(client_features["client_1"])
+        # client_2 should hash the features before sending to client_1
+        client_2_hashed_features = [hash(feature) for feature in client_features["client_2"]]
+        common_features = psi.psi(client_2_hashed_features)
+        print("Common Features: ", common_features)
+    
 
 if __name__ == '__main__':
     unittest.main()
