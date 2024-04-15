@@ -15,6 +15,22 @@ class TeacherModel(torch.nn.Module):
         x = self.fc(x)
         return x
     
+    def fit(self, loader, learning_rate=0.01, n_epochs=10):
+        ceriterion = torch.nn.CrossEntropyLoss()
+        optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
+
+        self.train()
+        progress_bar = tqdm(range(len(loader) * n_epochs), desc="Teacher training progress")
+        for _ in range(n_epochs):
+            for X, y in loader:
+                optimizer.zero_grad()
+                outputs = self.forward(X)
+                loss = ceriterion(outputs, y)
+                loss.backward()
+                optimizer.step()
+                progress_bar.update(1)
+        progress_bar.close()
+    
     def predict(self, loader):
         self.eval()
         with torch.no_grad():
@@ -27,8 +43,12 @@ class TeacherModel(torch.nn.Module):
             return predictions, possiblity
     
 class StudentModel(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, teacher, temperature=2, alpha=0.7):
         super(StudentModel, self).__init__()
+        self.teacher = teacher
+        self.temperature = temperature
+        self.alpha = alpha
+
         self.conv = torch.nn.Conv2d(1, 16, 3)
         self.relu = torch.nn.ReLU()
         self.fc = torch.nn.Linear(26 * 26 * 16, 10)
@@ -40,6 +60,22 @@ class StudentModel(torch.nn.Module):
         x = self.fc(x)
         return x
     
+    def distill(self, loader, learning_rate=0.01, n_epochs=10):
+        optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
+
+        self.train()
+        progress_bar = tqdm(range(len(loader) * n_epochs), desc="Student distill progress")
+        for _ in range(n_epochs):
+            for X, y in loader:
+                optimizer.zero_grad()
+                outputs_teacher = self.teacher(X)
+                outputs_student = self.forward(X)
+                loss = self.distill_loss(outputs_teacher, outputs_student, y)
+                loss.backward()
+                optimizer.step()
+                progress_bar.update(1)
+        progress_bar.close()
+    
     def predict(self, loader):
         self.eval()
         with torch.no_grad():
@@ -50,29 +86,6 @@ class StudentModel(torch.nn.Module):
                 possiblities += possiblity.tolist()
                 predictions += torch.argmax(possiblity, dim=1).tolist()
             return predictions, possiblity
-    
-class Distillation:
-    def __init__(self, teacher, student, temperature=3, alpha=0.7):
-        self.teacher = teacher
-        self.student = student
-        self.temperature = temperature
-        self.alpha = alpha
-
-    def fit(self, loader, learning_rate=0.01, n_epochs=10):
-        optimizer = torch.optim.Adam(self.student.parameters(), lr=learning_rate)
-
-        self.student.train()
-        progress_bar = tqdm(range(len(loader) * n_epochs), desc="Training progress")
-        for _ in range(n_epochs):
-            for X, y in loader:
-                optimizer.zero_grad()
-                outputs_teacher = self.teacher(X)
-                outputs_student = self.student(X)
-                loss = self.distill_loss(outputs_teacher, outputs_student, y)
-                loss.backward()
-                optimizer.step()
-                progress_bar.update(1)
-        progress_bar.close()
 
     def distill_loss(self, y_teacher, y_student, y_true):
         soft_teacher = torch.nn.functional.softmax(y_teacher / self.temperature, dim=1)

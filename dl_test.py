@@ -19,7 +19,7 @@ from dl.gru import GRU
 from dl.lstm import LSTM
 from dl.nlp.seq2seq import Seq2Seq
 from dl.nlp.transformer import Transformer
-from dl.distillation import Distillation, TeacherModel, StudentModel
+from dl.distillation import TeacherModel, StudentModel
 
 from sklearn.preprocessing import StandardScaler
 
@@ -368,9 +368,10 @@ class TestDistillation(unittest.TestCase):
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
 
         teacher = TeacherModel().to(device)
-        student = StudentModel().to(device)
-        distillation = Distillation(teacher, student)
-        distillation.fit(train_loader)
+        teacher.fit(train_loader)
+
+        student = StudentModel(teacher).to(device)
+        student.distill(train_loader)
 
         y_pred_teacher, y_prob_teacher = teacher.predict(test_loader)
         y_pred_student, y_prob_student = student.predict(test_loader)
