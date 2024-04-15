@@ -14,11 +14,12 @@ from dl.simple_logistic_regression import SimpleLogisticRegression
 from dl.simple_cnn_classifier import SimpleCNNClassifier
 from dl.simple_cnn_regression import SimpleCNNRegression
 from dl.res_net import ResNet
-from dl.rnn import rnn
+from dl.rnn import RNN
 from dl.gru import GRU
 from dl.lstm import LSTM
 from dl.nlp.seq2seq import Seq2Seq
 from dl.nlp.transformer import Transformer
+from dl.distillation import Distillation, TeacherModel, StudentModel
 
 from sklearn.preprocessing import StandardScaler
 
@@ -61,9 +62,6 @@ class TestNN(unittest.TestCase):
 
 class TestCNN(unittest.TestCase):
     def test_simple_cnn_classifier(self):
-        num_classes = 10
-        num_channels = 1
-
         transform = torchvision.transforms.Compose([
             torchvision.transforms.Resize((28, 28)),  # 确保图像大小为28x28
             torchvision.transforms.ToTensor(),  # 将图像转换为Tensor
@@ -173,7 +171,7 @@ class TestRNN(unittest.TestCase):
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
 
-        model = rnn(1, 10, 1)
+        model = RNN(1, 10, 1)
         model.fit(train_loader)
         model.summary()
 
@@ -358,6 +356,27 @@ class TestTransformer(unittest.TestCase):
             prediction = predictions[i][0].tolist()
             pred_sentence = Preprocess.decode_sentence(prediction, index_to_tgt_word)
             print("Predicted:", pred_sentence)
+
+class TestDistillation(unittest.TestCase):
+    def test_distillation(self):
+        train_dataset = torchvision.datasets.MNIST(root='./data', train=True,
+                                                download=True, transform=torchvision.transforms.ToTensor())
+        test_dataset = torchvision.datasets.MNIST(root='./data', train=False,
+                                                download=True, transform=torchvision.transforms.ToTensor())
+
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+        teacher = TeacherModel().to(device)
+        student = StudentModel().to(device)
+        distillation = Distillation(teacher, student)
+        distillation.fit(train_loader)
+
+        y_pred_teacher, y_prob_teacher = teacher.predict(test_loader)
+        y_pred_student, y_prob_student = student.predict(test_loader)
+
+        accuracy = Metrics.accuracy(np.array(y_pred_teacher), np.array(y_pred_student))
+        print('Distillation Accuracy:', accuracy)
 
 if __name__ == '__main__':
     unittest.main()

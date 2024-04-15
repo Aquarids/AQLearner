@@ -1,9 +1,9 @@
 import torch
 from tqdm import tqdm
 
-class rnn(torch.nn.Module):
+class RNN(torch.nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
-        super(rnn, self).__init__()
+        super(RNN, self).__init__()
         self.hidden_size = hidden_size
 
         self.W_xh = torch.nn.Parameter(torch.randn(input_size, hidden_size))
