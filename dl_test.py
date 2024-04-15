@@ -20,6 +20,7 @@ from dl.lstm import LSTM
 from dl.nlp.seq2seq import Seq2Seq
 from dl.nlp.transformer import Transformer
 from dl.distillation import TeacherModel, StudentModel
+from dl.diffusion import DiffusionModel
 
 from sklearn.preprocessing import StandardScaler
 
@@ -63,18 +64,16 @@ class TestNN(unittest.TestCase):
 class TestCNN(unittest.TestCase):
     def test_simple_cnn_classifier(self):
         transform = torchvision.transforms.Compose([
-            torchvision.transforms.Resize((28, 28)),  # 确保图像大小为28x28
-            torchvision.transforms.ToTensor(),  # 将图像转换为Tensor
-            torchvision.transforms.Normalize((0.5,), (0.5,))  # 标准化
+            torchvision.transforms.Resize((28, 28)),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5,), (0.5,))
         ])
 
-        # 下载/加载MNIST数据集
         train_dataset = torchvision.datasets.MNIST(root='./data', train=True,
                                                 download=True, transform=transform)
         test_dataset = torchvision.datasets.MNIST(root='./data', train=False,
                                                 download=True, transform=transform)
 
-        # 创建DataLoader
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
 
@@ -378,6 +377,36 @@ class TestDistillation(unittest.TestCase):
 
         accuracy = Metrics.accuracy(np.array(y_pred_teacher), np.array(y_pred_student))
         print('Distillation Accuracy:', accuracy)
+
+class TestDiffusion(unittest.TestCase):
+    def imshow(self, img, title):
+        npimg = img.numpy()
+        npimg = np.squeeze(npimg, axis=0)
+        plt.imshow(npimg, cmap='gray')
+        plt.title(title)
+        plt.show()
+
+    def test_diffusion(self):
+        train_dataset = torchvision.datasets.MNIST(root='./data', train=True,
+                                                download=True, transform=torchvision.transforms.ToTensor())
+        test_dataset = torchvision.datasets.MNIST(root='./data', train=False,
+                                                download=True, transform=torchvision.transforms.ToTensor())
+
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=1, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False)
+
+        model = DiffusionModel().to(device)
+        model.fit(train_loader)
+        
+        input = test_loader.dataset[0][0]
+        noise_level = 0.3
+        corrupted_data = model.corrupt(input, noise_level, mean=0, std=0.5)
+
+        reconstructed_data = model.reverse_diffusion(corrupted_data, steps=50, std=0.5)
+
+        self.imshow(input, 'Original Image')
+        self.imshow(corrupted_data.view(1, 28, 28).detach(), 'Noisy Image')
+        self.imshow(reconstructed_data.view(1, 28, 28).detach(), 'Reconstructed Image')
 
 if __name__ == '__main__':
     unittest.main()
