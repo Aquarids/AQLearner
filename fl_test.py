@@ -44,14 +44,6 @@ class TestModelFactory(unittest.TestCase):
         print("criterion: ", criterion)
 
 class TestFL(unittest.TestCase):        
-    class SimpleLinearClassificationModel(torch.nn.Module):
-        def __init__(self, n_features):
-            super(TestFL.SimpleLinearClassificationModel, self).__init__()
-            self.fc = torch.nn.Linear(n_features, 1)
-        
-        def forward(self, x):
-            return torch.sigmoid(self.fc(x))
-        
     def splite_data(self, X, y, n_clients):
         # the data should owned by the clinets themselves rather than the server, here just for showing the concept
         total_samples = len(X)
