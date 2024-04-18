@@ -3,13 +3,31 @@ from blockchain.block import Block
 from blockchain.node import FullNode, LightNode
 from blockchain.transaction import Transaction
 from blockchain.wallet import Wallet
+from blockchain.utxo import UTXOSet
 from blockchain.net import Net
 
 import unittest
 
 class TestBlockchain(unittest.TestCase):
-    def _transaction(self, sender: Wallet, recipient:Wallet, amount, sender_node):
-        tx = Transaction(sender.get_address(), recipient.get_address(), amount)
+    def _transaction(self, sender: Wallet, recipient: Wallet, amount, utxo: UTXOSet, sender_node):
+        inputs = []
+        outputs = [(recipient.get_address(), amount)]
+        utxos = utxo.find_utxos(sender.get_address())
+
+        cur_amt = 0
+        for txid, idx, amt in utxos:
+            if cur_amt >= amount:
+                break
+            inputs.append((txid, idx))
+            cur_amt += amt
+        if cur_amt < amount:
+            raise Exception("Not enough funds")
+        
+        change = cur_amt - amount
+        if change > 0:
+            outputs.append((sender.get_address(), change))
+
+        tx = Transaction(sender.get_address(), inputs, outputs)
         sender.sign_transaction(tx)
 
         self.full_node_1.blockchain.add_transaction(tx)
@@ -43,25 +61,23 @@ class TestBlockchain(unittest.TestCase):
         wallet_b = self.full_node_1.blockchain.create_wallet()
         print(f"Wallet A address: {wallet_a.get_address()}")
         print(f"Wallet B address: {wallet_b.get_address()}")
-
-        # should not happen in real blockchain network
-        self.net.broadcast_wallet(wallet_a)
-        self.net.broadcast_wallet(wallet_b)
         
         self.full_node_1.blockchain.mine_coinbase(wallet_a.get_address())
-        print(f"Wallet A balance: {self.full_node_1.blockchain.get_wallet(wallet_a.get_address()).get_balance()}")
-        print(f"Wallet B balance: {self.full_node_1.blockchain.get_wallet(wallet_b.get_address()).get_balance()}")
+        print(f"Wallet A balance: {wallet_a.get_balance(self.full_node_1.blockchain.utxo_set)}")
+        print(f"Wallet B balance: {wallet_b.get_balance(self.full_node_1.blockchain.utxo_set)}")
+
         self.net.broadcast_block(self.full_node_1.blockchain.get_latest_block(), self.full_node_1)
 
         # assuming transactions between wallet A and wallet B
-        self._transaction(wallet_a, wallet_b, 7, self.full_node_1)
-        self._transaction(wallet_a, wallet_b, 2, self.full_node_1)
-        self._transaction(wallet_a, wallet_b, 1, self.full_node_1)
-        self._transaction(wallet_b, wallet_a, 5, self.full_node_1)
-        self._transaction(wallet_a, wallet_b, 3, self.full_node_1)
-        self._transaction(wallet_a, wallet_b, 3, self.full_node_1)
-        print(f"Wallet A balance: {wallet_a.get_balance()}")
-        print(f"Wallet B balance: {wallet_b.get_balance()}")
+        utxo = self.full_node_1.blockchain.utxo_set
+        self._transaction(wallet_a, wallet_b, 7, utxo, self.full_node_1)
+        self._transaction(wallet_a, wallet_b, 2, utxo, self.full_node_1)
+        self._transaction(wallet_a, wallet_b, 1, utxo, self.full_node_1)
+        self._transaction(wallet_b, wallet_a, 5, utxo, self.full_node_1)
+        self._transaction(wallet_a, wallet_b, 3, utxo, self.full_node_1)
+        self._transaction(wallet_a, wallet_b, 3, utxo, self.full_node_1)
+        print(f"Wallet A balance: {wallet_a.get_balance(utxo)}")
+        print(f"Wallet B balance: {wallet_b.get_balance(utxo)}")
         print(f"Node 1 Block count: {len(self.full_node_1.blockchain.chain)}")
         print(f"Node 2 Block count: {len(self.full_node_2.blockchain.chain)}")
 

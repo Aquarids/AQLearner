@@ -47,49 +47,14 @@ class Net:
                 else:
                     print(f"Transaction {new_transaction.txid} rejected by node {id}")
 
-    # should not broadcast wallet, just for simplfy the test
-    def broadcast_wallet(self, wallet):
-        for node in self.full_nodes:
-            node.blockchain.add_wallet(wallet)
-
     def _serialize_block(self, block: Block):
-        return {
-            "index": block.index,
-            "transactions": block.transactions,
-            "previous_hash": block.previous_hash,
-            "difficulty": block.difficulty,
-            "nonce": block.nonce,
-            "timestamp": block.timestamp,
-            "hash": block.hash,
-        }
+        return block.serialize()
     
     def _deserialize_block(self, block_data):
-        return Block(
-            index=block_data["index"],
-            transactions=block_data["transactions"],
-            previous_hash=block_data["previous_hash"],
-            difficulty=block_data["difficulty"],
-            nonce=block_data["nonce"],
-            timestamp=block_data["timestamp"],
-        )
+        return Block.deserialize(block_data)
     
     def _serialize_transaction(self, transaction: Transaction):
-        return {
-            "txid": transaction.txid,
-            "sender": transaction.sender,
-            "recipient": transaction.recipient,
-            "amount": transaction.amount,
-            "signature": transaction.signature,
-            "timestamp": transaction.timestamp,
-            "is_coinbase": transaction.is_coinbase,
-        }
+        return transaction.serialize()
     
     def _deserialize_transaction(self, transaction_data):
-        return Transaction(
-            sender=transaction_data["sender"],
-            recipient=transaction_data["recipient"],
-            amount=transaction_data["amount"],
-            timestamp=transaction_data["timestamp"],
-            signature=transaction_data["signature"],
-            is_coinbase=transaction_data["is_coinbase"],
-        )
+        return Transaction.deserialize(transaction_data)

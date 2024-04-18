@@ -4,7 +4,7 @@ import time
 from blockchain.transaction import Transaction
 
 class Block:
-    def __init__(self, index, transactions, previous_hash, difficulty, nonce=0, timestamp=None):
+    def __init__(self, index, transactions: list[Transaction], previous_hash, difficulty, nonce=0, timestamp=None):
         self.index = index
         self.timestamp = timestamp if timestamp else time.time()
         self.transactions = transactions
@@ -42,3 +42,26 @@ class Block:
         while not self.hash.startswith(target):
             self.nonce += 1
             self.hash = self.calculate_hash()
+
+    def serialize(self):
+        return {
+            "index": self.index,
+            "timestamp": self.timestamp,
+            "transactions": [tx.serialize() for tx in self.transactions],
+            "previous_hash": self.previous_hash,
+            "difficulty": self.difficulty,
+            "nonce": self.nonce,
+            "hash": self.hash,
+            "merkle_root": self.merkle_root,
+        }
+    
+    def deserialize(data):
+        transactions = [Transaction.deserialize(tx) for tx in data["transactions"]]
+        return Block(
+            index=data["index"],
+            timestamp=data["timestamp"],
+            transactions=transactions,
+            previous_hash=data["previous_hash"],
+            difficulty=data["difficulty"],
+            nonce=data["nonce"],
+        )
