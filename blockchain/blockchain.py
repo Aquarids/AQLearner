@@ -29,7 +29,7 @@ class Blockchain:
             nonce=0,
             timestamp=1710000000,
         )
-        self.utxo_set.add_utxo(genesis_transaction.txid, 0, 50, "system")
+        self.utxo_set.add_utxo(genesis_transaction.txid, 0, 0, "system")
         return block
     
     def get_latest_block(self):
@@ -42,15 +42,12 @@ class Blockchain:
         inputs = []
         outputs = [(miner_address, const_coinbase_reward)]
         coinbase_tx = Transaction("system", inputs, outputs, is_coinbase=True)
-        transactions = [coinbase_tx] + self.pending_transactions
+        self.utxo_set.add_transaction(coinbase_tx)
 
+        transactions = [coinbase_tx] + self.pending_transactions
         new_block = Block(len(self.chain), transactions, self.get_latest_block().hash, self.difficulty)
         new_block.mine_block()
         self.chain.append(new_block)
-
-        for transaction in transactions:
-            for idx, (recipient, amount) in enumerate(transaction.outputs):
-                self.utxo_set.add_utxo(transaction.txid, idx, amount, recipient)
 
         self._clear_pending_transactions()
         
@@ -65,41 +62,37 @@ class Blockchain:
         
         # Assuming enough transactions are collected
         if len(valid_transactions) >= const_block_size:
+            self.utxo_set.add_transaction(reward_tx)
+            
             new_block = Block(len(self.chain), valid_transactions, self.get_latest_block().hash, self.difficulty)
             new_block.mine_block()
             self.chain.append(new_block)
-
-            for transaction in valid_transactions:
-                for idx, (recipient, amount) in enumerate(transaction.outputs):
-                    self.utxo_set.add_utxo(transaction.txid, idx, amount, recipient)
 
             self._clear_pending_transactions()
             return new_block
         else:
             return None
     
-    def add_transaction(self, transaction: Transaction):
-        if not transaction.inputs or not transaction.outputs:
+    def add_transaction(self, tx: Transaction):
+        if not tx.inputs or not tx.outputs:
             print("Transaction must include from and to addresses")
             return False
-        if not transaction.is_valid(self.utxo_set):
+        if not tx.is_valid(self.utxo_set):
             print("Transaction is invalid")
             return False
-        for txid, index in transaction.inputs:
-            self.utxo_set.remove_utxo(txid, index)
-        for idx, (recipient, amount) in enumerate(transaction.outputs):
-            self.utxo_set.add_utxo(transaction.txid, idx, amount, recipient)
 
-        self.pending_transactions.append(transaction)
+        self.utxo_set.add_transaction(tx)
+        self.pending_transactions.append(tx)
         return True
     
     def add_block(self, block: Block):
         block.previous_hash = self.get_latest_block().hash
         block.mine_block()
         if self.validate_new_block(block):
-            for transaction in block.transactions:
-                for idx, (recipient, amount) in enumerate(transaction.outputs):
-                    self.utxo_set.add_utxo(transaction.txid, idx, amount, recipient)
+            for tx in block.transactions:
+                self.utxo_set.add_transaction(tx)
+                if tx in self.pending_transactions:
+                    self.pending_transactions.remove(tx)
             self.chain.append(block)
 
     def validate_new_block(self, block: Block):

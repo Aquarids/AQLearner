@@ -4,11 +4,12 @@ import hashlib
 import time
 
 class Transaction:
-    def __init__(self, sender, inputs, outputs, timestamp=None, signature=None, is_coinbase=False, contract=None):
+    def __init__(self, sender, inputs, outputs, timestamp=None, signature=None, is_coinbase=False, contract=None, is_pending=False):
         self.sender = sender
         self.is_coinbase = is_coinbase
         self.timestamp = timestamp if timestamp else time.time()
         self.signature = signature
+        self.is_pending = is_pending
 
         self.inputs = inputs # List of tuples (txid, output_index)
         self.outputs = outputs # List of tuples (recipient, amount)
@@ -35,7 +36,7 @@ class Transaction:
         vk = VerifyingKey.from_string(bytes.fromhex(self.sender), curve=SECP256k1)
         return vk.verify(bytes.fromhex(self.signature), self.txid.encode())
     
-    def check_blance(self, utxo_set: UTXOSet):
+    def check_balance(self, utxo_set: UTXOSet):
         total_input_value = 0
         for txid, idx in self.inputs:
             total_input_value += utxo_set.get_utxo(txid, idx)[0]
@@ -46,7 +47,7 @@ class Transaction:
         if not self.verify():
             return False
         if self.sender != "system":
-            return self.check_blance(utxo_set)
+            return self.check_balance(utxo_set)
         return True
 
     def serialize(self):
@@ -59,6 +60,7 @@ class Transaction:
             "is_coinbase": self.is_coinbase,
             "contract": self.contract,
             "txid": self.txid,
+            "is_pending": self.is_pending,
         }
     
     def deserialize(data):
@@ -70,4 +72,5 @@ class Transaction:
             signature=data["signature"],
             is_coinbase=data["is_coinbase"],
             contract=data["contract"],
+            is_pending=data["is_pending"],
         )

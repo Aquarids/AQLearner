@@ -2,6 +2,18 @@ class UTXOSet:
     def __init__(self):
         self.utxos = {}
 
+    def add_transaction(self, tx):
+        for txid, index in tx.inputs:
+            self.remove_utxo(txid, index)
+        for i, (address, amount) in enumerate(tx.outputs):
+            self.add_utxo(tx.txid, i, amount, address)
+
+    def withdraw_transaction(self, tx):
+        for txid, index in tx.inputs:
+            self.add_utxo(txid, index, tx.outputs[index].amount, tx.outputs[index].address)
+        for i, (address, amount) in enumerate(tx.outputs):
+            self.remove_utxo(tx.txid, i)
+
     def add_utxo(self, txid, output_index, amount, address):
         self.utxos[(txid, output_index)] = (amount, address)
 
