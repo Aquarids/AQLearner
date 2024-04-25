@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 import torch
+import torchtext
 import torch.utils.data
 import dl.metrics as Metrics
 import sklearn.datasets
@@ -19,6 +20,7 @@ from dl.gru import GRU
 from dl.lstm import LSTM
 from dl.nlp.seq2seq import Seq2Seq
 from dl.nlp.transformer import Transformer
+from dl.nlp.gpt import GPT
 from dl.distillation import TeacherModel, StudentModel
 from dl.diffusion import DiffusionModel
 
@@ -355,6 +357,45 @@ class TestTransformer(unittest.TestCase):
             prediction = predictions[i][0].tolist()
             pred_sentence = Preprocess.decode_sentence(prediction, index_to_tgt_word)
             print("Predicted:", pred_sentence)
+
+class TestGPT(unittest.TestCase):
+    def yield_tokens(self, tokenizer, data_iter):
+        for text in data_iter:
+            yield tokenizer(text)
+
+    def data_process(self, tokenizer, vocab, raw_text_iter):
+        data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in raw_text_iter]
+        return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
+    
+    def batchify(data, bsz):
+        seq_len = data.size(0) // bsz
+        data = data[:seq_len * bsz]
+        data = data.view(bsz, seq_len).t().contiguous()
+        return data.to(device)
+    
+    def test_gpt(self):
+        tokenizer = torchtext.data.utils.get_tokenizer("basic_english")
+
+        train_iter = torchtext.datasets.WikiText2(split='train')
+        vocab = torchtext.vocab.build_vocab_from_iterator(self.yield_tokens(tokenizer, train_iter), specials=["<unk>", "<pad>", "<eos>"])
+        vocab.set_default_index(vocab["<unk>"])
+
+        train_iter, val_iter, test_iter = torchtext.datasets.WikiText2()
+        train_data = self.data_process(tokenizer, vocab, train_iter)
+        val_data = self.data_process(tokenizer, vocab, val_iter)
+        test_data = self.data_process(tokenizer, vocab, test_iter)
+
+        batch_size = 20
+        train_data = self.batchify(train_data, batch_size)
+        val_data = self.batchify(val_data, batch_size)
+        test_data = self.batchify(test_data, batch_size)
+
+        model = GPT(vocab_size=len(vocab), embed_size=256, num_layers=6, heads=8, device=device,
+            forward_expansion=4, dropout=0.1, max_length=200)
+        model.train(train_data, val_data, n_epochs=5)
+
+        ans = model.predict("The capital of France is", 100, vocab)
+        print(ans)
 
 class TestDistillation(unittest.TestCase):
     def test_distillation(self):

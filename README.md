@@ -32,6 +32,7 @@ Here is a detailed list of the contents of this project, including the correspon
 | Deep Learning | GRU                               | Gated Recurrent Unit network implementation |
 | Deep Learning | Seq2Seq                           | Sequence to sequence model implementation   |
 | Deep Learning | Transformer                       | Implementation of a Transformer model based on attention mechanisms |
+| Deep Learning | GPT                               | Implementation of a Simple GPT model based on Transformer |
 | Deep Learning | Model Distillation                | Simple demonstration of model distillation techniques |
 | Deep Learning | Diffusion Model                   | Simple demonstration of a diffusion model using Gaussian noise |
 | Cryptography | DH Shared Encryption               | Implementation of Diffie-Hellman key exchange |
@@ -107,6 +108,7 @@ python -m unittest <test_file>.<test_class>
 | 深度学习      | 门控循环单元网络 (GRU)         | 实现门控循环单元网络                         |
 | 深度学习      | 序列到序列模型 (Seq2Seq)       | 实现序列到序列模型                           |
 | 深度学习      | Transformer                  | 实现基于注意力机制的Transformer模型           |
+| 深度学习      | GPT                          | 实现基于Transformer的简化GPT模型             |
 | 深度学习      | 蒸馏模型                      | 实现模型蒸馏技术的简单示意                     |
 | 深度学习      | 扩散模型                      | 使用高斯噪声生成扩散模型的简单示意               |
 | 深度学习      | Metric工具类                   | 包含性能评估指标的工具类                      |
