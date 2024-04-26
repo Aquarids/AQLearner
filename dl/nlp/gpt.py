@@ -16,8 +16,9 @@ class Block(torch.nn.Module):
         self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, query, key, value, mask):
-        attention = self.attention(query, key, value, attn_mask=mask)
-        x = self.dropout(self.norm1(attention + query))
+        # The MultiheadAttention layer returns a tuple (attention_output, attention_weights)
+        attention_output, _ = self.attention(query, key, value, attn_mask=mask)
+        x = self.dropout(self.norm1(attention_output + query))
         forward = self.feed_forward(x)
         output = self.dropout(self.norm2(forward + x))
         return output
@@ -49,26 +50,43 @@ class GPT(torch.nn.Module):
     def mask(self, size):
         mask = torch.tril(torch.ones(size, size)).type(torch.bool)
         return mask
-    
-    def train_epoch(self, loader, optimizer, criterion):
-        for x, y in loader:
-            optimizer.zero_grad()
-            output = self.forward(x, self.mask(x.size(1)))
-            loss = criterion(output.view(-1, output.size(-1)), y.view(-1))
-            loss.backward()
-            optimizer.step()
 
-    def train(self, train_loader, val_loader, learning_rate=0.01, n_epochs=10):
+    def pre_train(self, loader, learning_rate=0.01, n_epochs=10):
         self.train()
         optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
         criterion = torch.nn.CrossEntropyLoss()
 
-        progress_bar = tqdm(range(n_epochs), desc="Training progress")
+        progress_bar = tqdm(range(n_epochs * len(loader)), desc="Pre training progress")
         for _ in range(n_epochs):
-            self.train_epoch(train_loader, optimizer, criterion)
+            for input_seq, target_seq in loader:
+                optimizer.zero_grad()
+                output = self.forward(input_seq, self.mask(input_seq.size(0)))
+                loss = criterion(output.view(-1, output.size(-1)), target_seq.view(-1))
+                loss.backward()
+                optimizer.step()
+                progress_bar.update(1)
+        progress_bar.close()
+
+    def fine_tune(self, train_loader, val_loader, learning_rate=0.01, n_epochs=10):
+        # Freeze word embedding layer
+        for param in self.word_embedding.parameters():
+            param.requires_grad = False
+
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=learning_rate)
+        criterion = torch.nn.CrossEntropyLoss()
+
+        progress_bar = tqdm(range(n_epochs * len(train_loader)), desc="Fine tuning progress")
+        for _ in range(n_epochs):
+            self.train()
+            for input_seq, target_seq in train_loader:
+                optimizer.zero_grad()
+                output = self.forward(input_seq, self.mask(input_seq.size(0)))
+                loss = criterion(output.view(-1, output.size(-1)), target_seq.view(-1))
+                loss.backward()
+                optimizer.step()
+                progress_bar.update(1)
             val_accuracy = self.evaluate(val_loader)
-            progress_bar.set_postfix(f"Validation accuracy: {val_accuracy:.4f}")
-            progress_bar.update(1)
+            print(f"Validation accuracy: {val_accuracy}")
         progress_bar.close()
 
     def evaluate(self, loader):
@@ -76,22 +94,22 @@ class GPT(torch.nn.Module):
         correct = 0
         total = 0
         with torch.no_grad():
-            for x, y in loader:
-                output = self.forward(x, self.mask(x.size(1)))
+            for input_seq, target_seq in loader:
+                output = self.forward(input_seq, self.mask(input_seq.size(0)))
                 _, predicted = torch.max(output, dim=2)
-                correct += (predicted == y).sum().item()
-                total += y.size(0) * y.size(1)
+                correct += (predicted == target_seq).sum().item()
+                total += target_seq.size(0) * target_seq.size(1)
         return correct / total
 
-    def predict(self, start_text, max_length, vocab):
+    def predict(self, start_text, max_length, vocab, index_to_token):
         self.eval()
         with torch.no_grad():
-            tokens = [vocab[token] for token in start_text.split()]
+            tokens = [vocab.get_stoi().get(token.lower(), vocab.get_stoi()["<unk>"]) for token in start_text.split()]
             for _ in range(max_length):
-                x = torch.tensor(tokens).unsqueeze(0)
-                output = self.forward(x, self.mask(x.size(1)))
+                x = torch.tensor([tokens], dtype=torch.long)
+                output = self.forward(x, self.mask(x.size(0)))
                 _, predicted = torch.max(output[:, -1, :], dim=1)
-                tokens.append(predicted.item())
                 if predicted.item() == vocab["<eos>"]:
                     break
-        return " ".join([vocab[token] for token in tokens])
+                tokens.append(predicted.item())
+        return " ".join([index_to_token[token] for token in tokens])

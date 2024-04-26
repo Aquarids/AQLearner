@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 import torch
+import torch.utils.data.dataloader
 import torchtext
 import torch.utils.data
 import dl.metrics as Metrics
@@ -9,6 +10,7 @@ import sklearn.model_selection
 import torchvision.transforms
 import matplotlib.pyplot as plt
 import dl.nlp.preprocess as Preprocess
+import pandas as pd
 
 from dl.simple_linear_regression import SimpleLinearRegression
 from dl.simple_logistic_regression import SimpleLogisticRegression
@@ -21,6 +23,7 @@ from dl.lstm import LSTM
 from dl.nlp.seq2seq import Seq2Seq
 from dl.nlp.transformer import Transformer
 from dl.nlp.gpt import GPT
+from dl.nlp.wiki_text2 import WikiText2
 from dl.distillation import TeacherModel, StudentModel
 from dl.diffusion import DiffusionModel
 
@@ -358,43 +361,69 @@ class TestTransformer(unittest.TestCase):
             pred_sentence = Preprocess.decode_sentence(prediction, index_to_tgt_word)
             print("Predicted:", pred_sentence)
 
-class TestGPT(unittest.TestCase):
+class TestGPT(unittest.TestCase):    
     def yield_tokens(self, tokenizer, data_iter):
         for text in data_iter:
-            yield tokenizer(text)
+            yield tokenizer(text.lower())
 
     def data_process(self, tokenizer, vocab, raw_text_iter):
-        data = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in raw_text_iter]
-        return torch.cat(tuple(filter(lambda t: t.numel() > 0, data)))
+        data = []
+        for line in raw_text_iter:
+            tokens = tokenizer(line)
+            indices = [vocab[token] for token in tokens]
+            data.extend(indices)
+        return torch.tensor(data, dtype=torch.long)
     
-    def batchify(data, bsz):
+    def batchify(self, data, bsz):
         seq_len = data.size(0) // bsz
         data = data[:seq_len * bsz]
         data = data.view(bsz, seq_len).t().contiguous()
         return data.to(device)
+
+    def load_local_wiki_text2(self):
+        test = pd.read_parquet('./data/WikiText2/test.parquet')['text'].tolist()
+        train = pd.read_parquet('./data/WikiText2/train.parquet')['text'].tolist()
+        valid = pd.read_parquet('./data/WikiText2/validation.parquet')['text'].tolist()
+
+        return train, valid, test
+    
+    def custom_collate(self, batch):
+        input_seqs, target_seqs = zip(*batch)
+        input_seqs = torch.stack(input_seqs, dim=0)
+        target_seqs = torch.stack(target_seqs, dim=0)
+        return input_seqs, target_seqs
     
     def test_gpt(self):
         tokenizer = torchtext.data.utils.get_tokenizer("basic_english")
 
-        train_iter = torchtext.datasets.WikiText2(split='train')
+        # train_iter, val_iter, test_iter = torchtext.datasets.WikiText2()
+        train_iter, val_iter, test_iter = self.load_local_wiki_text2()
         vocab = torchtext.vocab.build_vocab_from_iterator(self.yield_tokens(tokenizer, train_iter), specials=["<unk>", "<pad>", "<eos>"])
         vocab.set_default_index(vocab["<unk>"])
+        
+        batch_size = 10
+        seq_length = 20
+        train_data = self.data_process(tokenizer, vocab, train_iter)[:10000]
+        val_data = self.data_process(tokenizer, vocab, val_iter)[:1000]
+        test_data = self.data_process(tokenizer, vocab, test_iter)[:1000]
 
-        train_iter, val_iter, test_iter = torchtext.datasets.WikiText2()
-        train_data = self.data_process(tokenizer, vocab, train_iter)
-        val_data = self.data_process(tokenizer, vocab, val_iter)
-        test_data = self.data_process(tokenizer, vocab, test_iter)
+        train_dataset = WikiText2(train_data, seq_length)
+        val_dataset = WikiText2(val_data, seq_length)
+        test_dataset = WikiText2(test_data, seq_length)
 
-        batch_size = 20
-        train_data = self.batchify(train_data, batch_size)
-        val_data = self.batchify(val_data, batch_size)
-        test_data = self.batchify(test_data, batch_size)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=self.custom_collate)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=self.custom_collate)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=self.custom_collate)
 
-        model = GPT(vocab_size=len(vocab), embed_size=256, num_layers=6, heads=8, device=device,
+        model = GPT(vocab_size=len(vocab), embed_size=256, num_layers=6, heads=8,
             forward_expansion=4, dropout=0.1, max_length=200)
-        model.train(train_data, val_data, n_epochs=5)
+        model.pre_train(train_loader, n_epochs=1)
 
-        ans = model.predict("The capital of France is", 100, vocab)
+        # it should use specific datasets, but here we use test_loader for simplicity
+        model.fine_tune(test_loader, val_loader, n_epochs=1)
+
+        index_to_token = {index: token for token, index in vocab.get_stoi().items()}
+        ans = model.predict("Hellow ", seq_length, vocab, index_to_token)
         print(ans)
 
 class TestDistillation(unittest.TestCase):
