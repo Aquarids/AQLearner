@@ -27,6 +27,7 @@ Here is a detailed list of the contents of this project, including the correspon
 | Deep Learning | CNN Classifier                    | Simple CNN classifier using a single-layer convolution |
 | Deep Learning | CNN Regression                    | Simple CNN regression using a single-layer convolution |
 | Deep Learning | ResNet                            | Simplified version of a residual network    |
+| Deep Learning | GAN                               | Simplified implementation of a image GAN |
 | Deep Learning | RNN                               | Basic implementation of a recurrent neural network |
 | Deep Learning | LSTM                              | Long Short-Term Memory network implementation |
 | Deep Learning | GRU                               | Gated Recurrent Unit network implementation |
@@ -102,6 +103,7 @@ python -m unittest <test_file>.<test_class>
 | 深度学习      | 逻辑回归                       | 使用单层网络进行简单逻辑回归示意              |
 | 深度学习      | 单层卷积CNN分类器              | 使用单层卷积的CNN分类示意                    |
 | 深度学习      | 单层卷积CNN回归                | 使用单层卷积的CNN回归示意                    |
+| 深度学习      | 对抗生成网络                   | 简化的图像对抗生成网络                       |
 | 深度学习      | 简化版残差网络 (ResNet)        | 简化版的残差网络示意                         |
 | 深度学习      | 循环神经网络 (RNN)             | 实现基本的循环神经网络示意                   |
 | 深度学习      | 长短期记忆网络 (LSTM)          | 实现长短期记忆网络                           |
