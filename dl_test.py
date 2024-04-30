@@ -17,6 +17,7 @@ from dl.simple_logistic_regression import SimpleLogisticRegression
 from dl.simple_cnn_classifier import SimpleCNNClassifier
 from dl.simple_cnn_regression import SimpleCNNRegression
 from dl.res_net import ResNet
+from dl.gan import GAN
 from dl.rnn import RNN
 from dl.gru import GRU
 from dl.lstm import LSTM
@@ -152,6 +153,26 @@ class TestResNet(unittest.TestCase):
 
         print('ResNet Accuracy:', Metrics.accuracy(y_test, y_pred))
         print('ResNet Precision, Recall, F1:', Metrics.precision_recall_f1(y_test, y_pred))
+
+class TestGAN(unittest.TestCase):
+    def test_gan(self):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5,), (0.5,))
+        ])
+        dataset = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
+
+        input_dim = 100
+        output_dim = 28 * 28
+
+        gan = GAN(input_dim, output_dim)
+        gan.train(loader, lr=0.0002, n_iter=10)
+
+        noise = torch.randn(1, input_dim)
+        generated_image = gan.generator(noise).view(28, 28).detach().cpu().numpy()
+        plt.imshow(generated_image, cmap='gray')
+        plt.show()
 
 class TestRNN(unittest.TestCase):
     def test_rnn(self):
