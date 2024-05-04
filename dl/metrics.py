@@ -10,9 +10,9 @@ def mse(y_true, y_pred):
 
 def precision_recall_f1(y_true, y_pred):
     eps = 1e-7
-    true_positive = np.sum((y_pred == 1) & (y_true == 1))
-    false_positive = np.sum((y_pred == 1) & (y_true == 0))
-    false_negative = np.sum((y_pred == 0) & (y_true == 1))
+    true_positive = np.sum((y_pred - 1 == 0) & (y_true - 1 == 0))
+    false_positive = np.sum((y_pred - 1 == 0) & (y_true - 1 != 0))
+    false_negative = np.sum((y_pred - 1 != 0) & (y_true - 1 == 0))
     precision = true_positive / (true_positive + false_positive + eps)
     recall = true_positive / (true_positive + false_negative + eps)
     f1 = 2 * (precision * recall) / (precision + recall + eps)

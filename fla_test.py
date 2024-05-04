@@ -16,38 +16,38 @@ import sklearn.model_selection
 import unittest
 
 class TestDataPoison(unittest.TestCase):
-    # def test_binary_label_flip(self):
-    #     X, y = sklearn.datasets.load_breast_cancer(return_X_y=True)
-    #     X, y = torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32).view(-1, 1)
-    #     X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=0.1, random_state=42)
+    def test_binary_label_flip(self):
+        X, y = sklearn.datasets.load_breast_cancer(return_X_y=True)
+        X, y = torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32).view(-1, 1)
+        X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=0.1, random_state=42)
 
-    #     train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_train, y_train), batch_size=10, shuffle=True)
-    #     test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, y_test), batch_size=10, shuffle=False)
+        train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_train, y_train), batch_size=10, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, y_test), batch_size=10, shuffle=False)
 
-    #     data_poison = DataPoison()
-    #     poisoned_loader = data_poison.binary_label_flip(train_loader)
-    #     num_features = X_train.shape[1]
+        data_poison = DataPoison()
+        poisoned_loader = data_poison.binary_label_flip(train_loader)
+        num_features = X_train.shape[1]
 
-    #     print("Normal training")
-    #     model = SimpleLogisticRegression(num_features, 1)
-    #     model.fit(train_loader, n_iters=10)
-    #     y_pred, _ = model.predict(test_loader)
+        print("Normal training")
+        model = SimpleLogisticRegression(num_features, 1)
+        model.fit(train_loader, n_iters=10)
+        y_pred, _ = model.predict(test_loader)
 
-    #     y_test = []
-    #     for _, y in test_loader:
-    #         y_test += y.tolist()
-    #     normal_accuracy = Metrics.accuracy(np.array(y_test), np.array(y_pred))
+        y_test = []
+        for _, y in test_loader:
+            y_test += y.tolist()
+        normal_accuracy = Metrics.accuracy(np.array(y_test), np.array(y_pred))
 
-    #     print("Poison training")
-    #     poisoned_model = SimpleLogisticRegression(num_features, 1)
-    #     poisoned_model.fit(poisoned_loader, n_iters=10)
-    #     poisoned_y_pred, _ = poisoned_model.predict(test_loader)
+        print("Poison training")
+        poisoned_model = SimpleLogisticRegression(num_features, 1)
+        poisoned_model.fit(poisoned_loader, n_iters=10)
+        poisoned_y_pred, _ = poisoned_model.predict(test_loader)
 
-    #     poisoned_accuracy = Metrics.accuracy(np.array(y_test), np.array(poisoned_y_pred))
+        poisoned_accuracy = Metrics.accuracy(np.array(y_test), np.array(poisoned_y_pred))
 
-    #     print("Normal accuracy: ", normal_accuracy)
-    #     print("Poison accuracy: ", poisoned_accuracy)
-    #     print("Diff accuracy: ", normal_accuracy - poisoned_accuracy)
+        print("Normal accuracy: ", normal_accuracy)
+        print("Poison accuracy: ", poisoned_accuracy)
+        print("Diff accuracy: ", normal_accuracy - poisoned_accuracy)
 
     def train(self, train_loader, test_loader, name):
         print(f"{name} Training")
@@ -85,7 +85,6 @@ class TestDataPoison(unittest.TestCase):
         label_flip_accuracy = self.train(label_flip_loader, test_loader, "Label Flip")
         sample_poisoned_accuracy = self.train(sample_poisoned_loader, test_loader, "Sample Poison")
         ood_data_accuracy = self.train(ood_data_loader, test_loader, "OOD Data")
-
 
         print("Normal accuracy: ", normal_accuracy)
         print("Label Flip accuracy: ", label_flip_accuracy)

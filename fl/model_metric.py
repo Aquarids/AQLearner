@@ -3,6 +3,7 @@ import time
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from fl.model_factory import type_regresion, type_binary_classification, type_multi_classification
 
@@ -11,24 +12,13 @@ class ModelMetric:
         if type != type_regresion and type != type_multi_classification and type != type_binary_classification:
             raise ValueError("Invalid type of model metric")
         self.type = type
-        self.y_true_list = []
-        self.y_pred_list = []
-        self.y_prob_list = []
-
-        self.mse = []
-        self.accuracy = []
-        self.precision = []
-        self.recall = []
-        self.f1 = []
-        self.tpr = []
-        self.fpr = []
-        self.auc = []
-
+        self.reset()
 
     def reset(self):
         self.y_true_list = []
         self.y_pred_list = []
         self.y_prob_list = []
+        self.writer = self._get_data_writer()
 
         self.mse = []
         self.accuracy = []
@@ -38,16 +28,35 @@ class ModelMetric:
         self.tpr = []
         self.fpr = []
         self.auc = []
+
+    def _get_data_writer(self):
+        cur_time = time.time()
+        dir = "./fl/metric/data"
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        file_name = f"pred_result_{cur_time}.xlsx"
+        writer = pd.ExcelWriter(os.path.join(dir, file_name))
+        return writer
 
     def update(self, y_true, y_pred, y_prob, id_round):
         self.y_true_list.append(y_true)
         self.y_pred_list.append(y_pred)
         if self.type == type_multi_classification:
             self.y_prob_list.append(y_prob)
+        data = {
+            "y_true": y_true,
+            "y_pred": y_pred,
+            "y_prob": y_prob
+        }
+        df = pd.DataFrame(data)
+        sheet_name = f"round_{id_round}"
+        df.to_excel(self.writer, sheet_name=sheet_name, index=False)
+        self.writer.save()
+
         self.caculate(y_true, y_pred, y_prob, id_round)
 
     def caculate(self, y_true, y_pred, y_prob, id_round):
-        y_true, y_pred, y_prob = np.array(y_true), np.array(y_pred), np.array(y_prob)
+        y_true, y_pred, y_prob = np.array(y_true).astype(float), np.array(y_pred).astype(float), np.array(y_prob)
         if self.type == type_regresion:
             self.mse.append(Metrics.mse(y_true, y_pred))
         elif self.type == type_binary_classification:
@@ -124,3 +133,4 @@ class ModelMetric:
             print("F1:", self.f1)
             print("TPR:", self.tpr)
             print("FPR:", self.fpr)
+        self.writer.close()
