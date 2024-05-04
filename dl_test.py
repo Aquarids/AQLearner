@@ -56,16 +56,20 @@ class TestNN(unittest.TestCase):
         X, y = torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32).view(-1, 1)
         X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=0.1, random_state=42)
 
+        train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_train, y_train), batch_size=32, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, y_test), batch_size=32, shuffle=False)
+
         num_features = X_train.shape[1]
         model = SimpleLogisticRegression(num_features, 1)
-        model.fit(X_train, y_train)
+        model.fit(train_loader)
         model.summary()
-        y_pred = model.predict(X_test)
+        y_pred, _ = model.predict(test_loader)
 
-        y_test_np = y_test.detach().cpu().numpy()
-        y_pred_np = y_pred.detach().cpu().numpy()
+        y_test = []
+        for _, y in test_loader:
+            y_test += y.tolist()
 
-        print('SimpleLogisticRegression Accuracy:', Metrics.accuracy(y_test_np, y_pred_np))
+        print('SimpleLogisticRegression Accuracy:', Metrics.accuracy(np.array(y_test), np.array(y_pred)))
 
 class TestCNN(unittest.TestCase):
     def test_simple_cnn_classifier(self):
