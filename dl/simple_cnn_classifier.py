@@ -14,19 +14,19 @@ class SimpleCNNClassifier(torch.nn.Module):
         x = self.fc(x)
         return x
     
-    def fit(self, loader, learning_rate=0.01, n_iters=1000):
+    def fit(self, loader, learning_rate=0.01, n_iters=10):
         criterion = torch.nn.CrossEntropyLoss()
         optimizer = torch.optim.SGD(self.parameters(), lr=learning_rate)
 
-        progress_bar = tqdm(range(n_iters), desc="Training progress")
-        for _ in progress_bar:
+        progress_bar = tqdm(range(n_iters * len(loader)), desc="Training progress")
+        for _ in range(n_iters):
             for X, y in loader:
                 optimizer.zero_grad()
                 outputs = self.forward(X)
                 loss = criterion(outputs, y)
                 loss.backward()
                 optimizer.step()
-            progress_bar.update(1)
+                progress_bar.update(1)
         progress_bar.close()
 
     def predict(self, loader):
