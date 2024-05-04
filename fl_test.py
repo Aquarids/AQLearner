@@ -63,76 +63,76 @@ class TestFL(unittest.TestCase):
                 torch.utils.data.TensorDataset(X_clients[client_id], y_clients[client_id]), batch_size=1, shuffle=True))
         return train_loader_clients
 
-    # def test_fl_regression(self):
-    #     X, y = sklearn.datasets.fetch_california_housing(return_X_y=True)
-    #     scaler = sklearn.preprocessing.StandardScaler()
-    #     X = scaler.fit_transform(X)
-    #     X, y = torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32).view(-1, 1)
-    #     X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=0.1, random_state=20)
+    def test_fl_regression(self):
+        X, y = sklearn.datasets.fetch_california_housing(return_X_y=True)
+        scaler = sklearn.preprocessing.StandardScaler()
+        X = scaler.fit_transform(X)
+        X, y = torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32).view(-1, 1)
+        X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=0.1, random_state=20)
 
-    #     model_json = {
-    #         "model_type": "regression",
-    #         "learning_rate": 0.01,
-    #         "optimizer": "adam",
-    #         "criterion": "mse",
-    #         "layers": [
-    #             {
-    #                 "type": "linear",
-    #                 "in_features": 8,
-    #                 "out_features": 128
-    #             },
-    #             {
-    #                 "type": "relu"
-    #             },
-    #             {
-    #                 "type": "linear",
-    #                 "in_features": 128,
-    #                 "out_features": 64
-    #             },
-    #             {
-    #                 "type": "relu"
-    #             },
-    #             {
-    #                 "type": "linear",
-    #                 "in_features": 64,
-    #                 "out_features": 32
-    #             },
-    #             {
-    #                 "type": "relu"
-    #             },
-    #             {
-    #                 "type": "linear",
-    #                 "in_features": 32,
-    #                 "out_features": 1
-    #             }
-    #         ]
-    #     }
+        model_json = {
+            "model_type": "regression",
+            "learning_rate": 0.01,
+            "optimizer": "adam",
+            "criterion": "mse",
+            "layers": [
+                {
+                    "type": "linear",
+                    "in_features": 8,
+                    "out_features": 128
+                },
+                {
+                    "type": "relu"
+                },
+                {
+                    "type": "linear",
+                    "in_features": 128,
+                    "out_features": 64
+                },
+                {
+                    "type": "relu"
+                },
+                {
+                    "type": "linear",
+                    "in_features": 64,
+                    "out_features": 32
+                },
+                {
+                    "type": "relu"
+                },
+                {
+                    "type": "linear",
+                    "in_features": 32,
+                    "out_features": 1
+                }
+            ]
+        }
 
-    #     n_clients = 10
-    #     clients = []
-    #     for i in range(n_clients):
-    #         # each client should have its own model
-    #         model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
-    #         client = Client(model, criterion, optimizer)
-    #         clients.append(client)
+        n_clients = 10
+        clients = []
+        for i in range(n_clients):
+            # each client should have its own model
+            model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
+            client = Client(model, criterion, optimizer)
+            clients.append(client)
 
-    #     model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
-    #     server = Server(model, optimizer, criterion, type=model_type)
+        model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
+        server = Server(model, optimizer, criterion, type=model_type)
 
-    #     n_rounds = 10
-    #     n_batch_size = 100
-    #     n_iter = 1
+        n_rounds = 10
+        n_batch_size = 100
+        n_iter = 1
 
-    #     train_loader_clients = self.splite_data(X_train, y_train, n_clients)
-    #     for client_id in range(n_clients):
-    #         clients[client_id].setDataLoader(train_loader_clients[client_id], n_iter)
+        train_loader_clients = self.splite_data(X_train, y_train, n_clients)
+        for client_id in range(n_clients):
+            clients[client_id].setDataLoader(train_loader_clients[client_id], n_iter)
         
-    #     server.setTestLoader(torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, y_test), batch_size=n_batch_size, shuffle=True))
+        server.setTestLoader(torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, y_test), batch_size=n_batch_size, shuffle=True))
         
-    #     controller = FLController(server, clients)
-    #     controller.train(n_rounds)
+        controller = FLController(server, clients)
+        controller.train(n_rounds)
 
-    #     server.summary()
+        server.summary()
 
     def test_fl_classification(self):
         X, y = sklearn.datasets.load_breast_cancer(return_X_y=True)
