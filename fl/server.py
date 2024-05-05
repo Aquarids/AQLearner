@@ -14,8 +14,8 @@ class Server:
     # for evaluating model after each round
     def setTestLoader(self, test_loader):
         self.test_loader = test_loader
-        
-    def aggretate_gradients(self, grads):
+
+    def calculate_gradients(self, grads):
         if grads is None:
             return
 
@@ -27,8 +27,15 @@ class Server:
                 avg_grad = grad
             else:
                 avg_grad = [a + b for a, b in zip(avg_grad, grad)]
+        return avg_grad
         
-        for param, grad in zip(self.model.parameters(), avg_grad):
+    def aggretate_gradients(self, grads):
+        if grads is None:
+            return
+
+        grads = self.calculate_gradients(grads)
+        
+        for param, grad in zip(self.model.parameters(), grads):
             param.grad = grad
 
         self.model.train()

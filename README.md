@@ -72,7 +72,7 @@ pip install -r requirements.txt
 - Run a specific test
 
 ```sh
-python -m unittest <test_file>.<test_class>
+python -m unittest <test_file>.<test_class>.<test_method>
 ```
 
 --------
@@ -151,5 +151,5 @@ pip install -r requirements.txt
 - 运行某个测试
 
 ```sh
-python -m unittest <test_file>.<test_class>
+python -m unittest <test_file>.<test_class>.<test_method>
 ```

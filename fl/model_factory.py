@@ -174,4 +174,4 @@ class ReshapeLayer(torch.nn.Module):
         self.shape = shape
 
     def forward(self, x):
-        return x.view(x.size(0), *self.shape)
+        return x.view(*self.shape)

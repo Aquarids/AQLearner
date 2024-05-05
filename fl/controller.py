@@ -10,19 +10,22 @@ class FLController:
         self.clients = clients
         self.n_clients = len(clients)
 
+    def aggregate_grads(self, grads):
+        self.server.aggretate_gradients(grads)
+
     def train(self, n_rounds):
         progress_bar = tqdm(range(n_rounds * self.n_clients))
         for round_idx in range(n_rounds):
             gradients = []
 
             for client_id in range(self.n_clients):
-                progress_bar.set_description(f"Training progress, round {round_idx}, client {client_id}")
+                progress_bar.set_description(f"Training progress, round {round_idx + 1}, client {client_id + 1}")
                 client = self.clients[client_id]
                 client.train()
                 gradients.append(client.get_gradients())
-                
                 progress_bar.update(1)
-            self.server.aggretate_gradients(gradients)
+
+            self.aggregate_grads(gradients)
             self.server.eval(round_idx)
         progress_bar.close()
         

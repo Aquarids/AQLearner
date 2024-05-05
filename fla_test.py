@@ -1,6 +1,10 @@
 from fl.client import Client
 from fl.server import Server
+from fl.controller import FLController
 from fl.model_factory import ModelFactory
+from fl.model_factory import type_regresion, type_binary_classification, type_multi_classification
+from fla.defend.robust_aggr.robust_aggr_server import RobustAggrServer, type_aggr_median, type_aggr_trimmed_mean
+from fla.defend.robust_aggr.robust_aggr_controller import MedianAggrFLController, TrimmedMeanAggrFLController
 from dl.simple_cnn_classifier import SimpleCNNClassifier
 from dl.simple_logistic_regression import SimpleLogisticRegression
 import dl.metrics as Metrics
@@ -90,3 +94,189 @@ class TestDataPoison(unittest.TestCase):
         print("Label Flip accuracy: ", label_flip_accuracy)
         print("Sample Poison accuracy: ", sample_poisoned_accuracy)
         print("OOD Data accuracy: ", ood_data_accuracy)
+
+class TestRobustAggr(unittest.TestCase):
+    def init_clients(self, n_clients, model_factory_json):
+        clients = []
+        for _ in range(n_clients):
+            model, _, optimizer, criterion = ModelFactory().create_model(model_factory_json)
+            client = Client(model, criterion, optimizer)
+            clients.append(client)
+        return clients
+    
+    def init_server(self, model_factory_json):
+        model, model_type, optimizer, criterion = ModelFactory().create_model(model_factory_json)
+        return RobustAggrServer(model, optimizer, criterion, model_type)
+    
+    def model_factory_json(self):
+        return {
+            "model_type": type_multi_classification,
+            "learning_rate": 0.01,
+            "optimizer": "adam",
+            "criterion": "cross_entropy",
+            "layers": [
+                {
+                    "type": "conv2d",
+                    "in_channels": 1,
+                    "out_channels": 32,
+                    "kernel_size": 3,
+                    "padding": 1,
+                    "activation": "relu",
+                    "stride": 1
+                },
+                {
+                    "type": "maxpool",
+                    "kernel_size": 2,
+                    "stride": 2,
+                    "padding": 0
+                },
+                {
+                    "type": "conv2d",
+                    "in_channels": 32,
+                    "out_channels": 64,
+                    "kernel_size": 3,
+                    "padding": 1,
+                    "activation": "relu",
+                    "stride": 1
+                },
+                {
+                    "type": "maxpool",
+                    "kernel_size": 2,
+                    "stride": 2,
+                    "padding": 0
+                },
+                {
+                    "type": "reshape",
+                    "shape": [-1, 64 * 7 * 7]
+                },
+                {
+                    "type": "linear",
+                    "in_features": 7 * 7 * 64,
+                    "out_features": 128
+                },
+                {
+                    "type": "relu"
+                },
+                {
+                    "type": "linear",
+                    "in_features": 128,
+                    "out_features": 10
+                },
+                {
+                    "type": "softmax",
+                    "dim": 1
+                }
+            ]
+        }
+    
+    def normal_compare(self):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((28, 28)),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5,), (0.5,))
+        ])
+
+        train_dataset = torchvision.datasets.MNIST(root='./data', train=True,
+                                                download=True, transform=transform)
+        test_dataset = torchvision.datasets.MNIST(root='./data', train=False,
+                                                download=True, transform=transform)
+
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+        data_poison = DataPoison()
+        sample_poisoned_loader = data_poison.sample_poison(train_loader, poison_ratio=0.7, noise_level=10)
+
+        n_clients = 6
+        n_poisoned_clients = 2 # assume poisoned client less than normal clients (1/3)
+        n_rounds = 2
+        n_iter = 1
+
+        clients = self.init_clients(n_clients, self.model_factory_json())
+        model, model_type, optimizer, criterion = ModelFactory().create_model(self.model_factory_json())
+        server = Server(model, optimizer, criterion, model_type)
+        controller = FLController(server, clients)
+
+        for i in range(n_clients):
+            if i < n_poisoned_clients:
+                clients[i].setDataLoader(sample_poisoned_loader, n_iter)
+            else:
+                clients[i].setDataLoader(train_loader, n_iter)
+        server.setTestLoader(test_loader)
+
+        controller.train(n_rounds)
+        server.model_metric.summary()
+
+    def test_median_aggr(self):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((28, 28)),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5,), (0.5,))
+        ])
+
+        train_dataset = torchvision.datasets.MNIST(root='./data', train=True,
+                                                download=True, transform=transform)
+        test_dataset = torchvision.datasets.MNIST(root='./data', train=False,
+                                                download=True, transform=transform)
+
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+        data_poison = DataPoison()
+        sample_poisoned_loader = data_poison.sample_poison(train_loader, poison_ratio=0.7, noise_level=10)
+
+        n_clients = 6
+        n_poisoned_clients = 2 # assume poisoned client less than normal clients (1/3)
+        n_rounds = 2
+        n_iter = 1
+
+        clients = self.init_clients(n_clients, self.model_factory_json())
+        server = self.init_server(self.model_factory_json())
+        controller = MedianAggrFLController(server, clients)
+
+        for i in range(n_clients):
+            if i < n_poisoned_clients:
+                clients[i].setDataLoader(sample_poisoned_loader, n_iter)
+            else:
+                clients[i].setDataLoader(train_loader, n_iter)
+        server.setTestLoader(test_loader)
+
+        controller.train(n_rounds)
+        server.model_metric.summary()
+
+    def test_trimmed_mean_aggr(self):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((28, 28)),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5,), (0.5,))
+        ])
+
+        train_dataset = torchvision.datasets.MNIST(root='./data', train=True,
+                                                download=True, transform=transform)
+        test_dataset = torchvision.datasets.MNIST(root='./data', train=False,
+                                                download=True, transform=transform)
+
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+        data_poison = DataPoison()
+        sample_poisoned_loader = data_poison.sample_poison(train_loader, poison_ratio=0.7, noise_level=10)
+
+        n_clients = 6
+        n_poisoned_clients = 2 # assume poisoned client less than normal clients (1/3)
+        n_rounds = 2
+        n_iter = 1
+
+        clients = self.init_clients(n_clients, self.model_factory_json())
+        server = self.init_server(self.model_factory_json())
+        controller = TrimmedMeanAggrFLController(server, clients, trim_ratio=0.2)
+
+        for i in range(n_clients):
+            if i < n_poisoned_clients:
+                clients[i].setDataLoader(sample_poisoned_loader, n_iter)
+            else:
+                clients[i].setDataLoader(train_loader, n_iter)
+        server.setTestLoader(test_loader)
+
+        controller.train(n_rounds)
+        server.model_metric.summary()

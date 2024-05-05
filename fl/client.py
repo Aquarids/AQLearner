@@ -1,5 +1,6 @@
 import torch
 import torch.utils.data
+from tqdm import tqdm
 
 class Client:
     def __init__(self, model: torch.nn.Module, criterion, optimizer):
@@ -16,6 +17,7 @@ class Client:
         self.model.train()
         train_loader = self.train_loader
 
+        progress_bar = tqdm(range(self.n_iters * len(train_loader)), desc="Client training progress")
         for _ in range(self.n_iters):
             for X_batch, y_batch in train_loader:
                 self.optimizer.zero_grad()
@@ -23,6 +25,8 @@ class Client:
                 loss = self.criterion(output, y_batch)
                 loss.backward()
                 self.optimizer.step()
+                progress_bar.update(1)
+        progress_bar.close()
     
     def get_gradients(self):
         grads = [param.grad for param in self.model.parameters()]
