@@ -28,10 +28,10 @@ class SimpleLogisticRegression(torch.nn.Module):
         self.eval()
         with torch.no_grad():
             predictions = []
-            possiblities = []
+            possibilities = []
             for X, _ in loader:
                 possiblity = self._forward(X)
-                possiblities += possiblity.tolist()
+                possibilities += possiblity.tolist()
                 predictions += torch.where(possiblity >= 0.5, 1, 0).tolist()
             return predictions, possiblity
 

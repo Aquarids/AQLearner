@@ -33,10 +33,10 @@ class SimpleCNNClassifier(torch.nn.Module):
         self.eval()
         with torch.no_grad():
             predictions = []
-            possiblities = []
+            possibilities = []
             for X, _ in loader:
                 possiblity = self.forward(X)
-                possiblities += possiblity.tolist()
+                possibilities += possiblity.tolist()
                 predictions += torch.argmax(possiblity, dim=1).tolist()
             return predictions, possiblity
         

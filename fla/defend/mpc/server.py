@@ -5,10 +5,10 @@ from tqdm import tqdm
 from fla.defend.mpc.client import Client
 from fla.defend.mpc.decryptor import Decryptor
 from fl.model_metric import ModelMetric
-from fl.model_factory import type_regresion, type_binary_classification, type_multi_classification
+from fl.model_factory import type_regression, type_binary_classification, type_multi_classification
 
 class Server:
-    def __init__(self, model: torch.nn.Module, optimizer, criterion, type=type_regresion, clients=[]):
+    def __init__(self, model: torch.nn.Module, optimizer, criterion, type=type_regression, clients=[]):
         if len(clients) == 0:
             raise ValueError("Clients can not be empty")
         self.model = model
@@ -100,20 +100,20 @@ class Server:
         self.model.eval()
         with torch.no_grad():
             predictions = []
-            possiblities = []
+            possibilities = []
             for X, _ in loader:
                 if type_multi_classification == self.type:
                     possiblity = self.model(X)
-                    possiblities += possiblity.tolist()
+                    possibilities += possiblity.tolist()
                     predictions += torch.argmax(possiblity, dim=1).tolist()
                 elif type_binary_classification == self.type:
                     possiblity = self.model(X)
-                    possiblities += possiblity.tolist()
+                    possibilities += possiblity.tolist()
                     predictions += torch.where(possiblity >= 0.5, 1, 0).tolist()
-                elif type_regresion == self.type:
+                elif type_regression == self.type:
                     possiblity = None
                     predictions += self.model(X).tolist()
-            return predictions, possiblities
+            return predictions, possibilities
         
     def summary(self):
         print(f"Max diff of gradients: {self.decryptor.max_diff}")

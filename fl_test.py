@@ -7,7 +7,7 @@ import sklearn.preprocessing
 
 from fl.client import Client
 from fl.server import Server
-from fl.controller import FLController
+from fl.controller import FLController, mode_avg_grad, mode_avg_weight, mode_avg_vote
 from fl.model_factory import ModelFactory
 from fl.psi import SimplePSI
 
@@ -62,8 +62,8 @@ class TestFL(unittest.TestCase):
             train_loader_clients.append(torch.utils.data.DataLoader(
                 torch.utils.data.TensorDataset(X_clients[client_id], y_clients[client_id]), batch_size=1, shuffle=True))
         return train_loader_clients
-
-    def test_fl_regression(self):
+    
+    def test_fl_regression(self, mode):
         X, y = sklearn.datasets.fetch_california_housing(return_X_y=True)
         scaler = sklearn.preprocessing.StandardScaler()
         X = scaler.fit_transform(X)
@@ -108,12 +108,12 @@ class TestFL(unittest.TestCase):
             ]
         }
 
-        n_clients = 10
+        n_clients = 5
         clients = []
         for i in range(n_clients):
             # each client should have its own model
             model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
-            client = Client(model, criterion, optimizer)
+            client = Client(model, criterion, optimizer, type=model_type)
             clients.append(client)
 
         model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
@@ -130,11 +130,11 @@ class TestFL(unittest.TestCase):
         server.setTestLoader(torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, y_test), batch_size=n_batch_size, shuffle=True))
         
         controller = FLController(server, clients)
-        controller.train(n_rounds)
+        controller.train(n_rounds, mode)
 
-        server.summary()
+        server.model_metric.summary()
 
-    def test_fl_classification(self):
+    def test_fl_classification(self, mode):
         X, y = sklearn.datasets.load_breast_cancer(return_X_y=True)
         X, y = torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32).view(-1, 1)
         X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=0.1, random_state=42)    
@@ -173,12 +173,12 @@ class TestFL(unittest.TestCase):
         }
         model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
 
-        n_clients = 10
+        n_clients = 5
         clients = []
         for i in range(n_clients):
             # each client should have its own model
             model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
-            client = Client(model, criterion, optimizer)
+            client = Client(model, criterion, optimizer, type=model_type)
             clients.append(client)
 
         model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
@@ -195,9 +195,27 @@ class TestFL(unittest.TestCase):
         server.setTestLoader(torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, y_test), batch_size=n_batch_size, shuffle=True))
         
         controller = FLController(server, clients)
-        controller.train(n_rounds)
+        controller.train(n_rounds, mode)
 
-        server.summary()
+        server.model_metric.summary()
+
+    def test_avg_grad_regression(self):
+        self.test_fl_regression(mode_avg_grad)
+
+    def test_avg_grad_classification(self):
+        self.test_fl_classification(mode_avg_grad)
+
+    def test_avg_weights_regression(self):
+        self.test_fl_regression(mode_avg_weight)
+
+    def test_avg_weights_classification(self):
+        self.test_fl_classification(mode_avg_weight)
+
+    def test_avg_votes_regression(self):
+        self.test_fl_regression(mode_avg_vote)
+
+    def test_avg_votes_classification(self):
+        self.test_fl_classification(mode_avg_vote)
 
 class TestPSI(unittest.TestCase):
     def test_psi(self):

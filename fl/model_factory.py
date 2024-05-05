@@ -1,6 +1,6 @@
 import torch
 
-type_regresion = "regression"
+type_regression = "regression"
 type_binary_classification = "binary_classification"
 type_multi_classification = "multi_classification"
 

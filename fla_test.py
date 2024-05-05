@@ -2,7 +2,7 @@ from fl.client import Client
 from fl.server import Server
 from fl.controller import FLController
 from fl.model_factory import ModelFactory
-from fl.model_factory import type_regresion, type_binary_classification, type_multi_classification
+from fl.model_factory import type_regression, type_binary_classification, type_multi_classification
 from fla.defend.robust_aggr.robust_aggr_server import RobustAggrServer, type_aggr_median, type_aggr_trimmed_mean
 from fla.defend.robust_aggr.robust_aggr_controller import MedianAggrFLController, TrimmedMeanAggrFLController
 from dl.simple_cnn_classifier import SimpleCNNClassifier

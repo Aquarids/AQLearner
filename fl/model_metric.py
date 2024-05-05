@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from fl.model_factory import type_regresion, type_binary_classification, type_multi_classification
+from fl.model_factory import type_regression, type_binary_classification, type_multi_classification
 
 class ModelMetric:
     def __init__(self, type) -> None:
-        if type != type_regresion and type != type_multi_classification and type != type_binary_classification:
+        if type != type_regression and type != type_multi_classification and type != type_binary_classification:
             raise ValueError("Invalid type of model metric")
         self.type = type
         self.reset()
@@ -39,15 +39,18 @@ class ModelMetric:
         return writer
 
     def update(self, y_true, y_pred, y_prob, id_round):
+        y_true, y_pred, y_prob = np.array(y_true).astype(float), np.array(y_pred).astype(float), np.array(y_prob)
+        
         self.y_true_list.append(y_true)
         self.y_pred_list.append(y_pred)
         if self.type == type_multi_classification:
             self.y_prob_list.append(y_prob)
         data = {
-            "y_true": y_true,
-            "y_pred": y_pred,
-            "y_prob": y_prob
+            "y_true": y_true.flatten(),
+            "y_pred": y_pred.flatten()
         }
+        if self.type == type_multi_classification or self.type == type_binary_classification:
+            data["y_prob"] = y_prob.flatten()
         df = pd.DataFrame(data)
         sheet_name = f"round_{id_round}"
         df.to_excel(self.writer, sheet_name=sheet_name, index=False)
@@ -56,8 +59,7 @@ class ModelMetric:
         self.caculate(y_true, y_pred, y_prob, id_round)
 
     def caculate(self, y_true, y_pred, y_prob, id_round):
-        y_true, y_pred, y_prob = np.array(y_true).astype(float), np.array(y_pred).astype(float), np.array(y_prob)
-        if self.type == type_regresion:
+        if self.type == type_regression:
             self.mse.append(Metrics.mse(y_true, y_pred))
         elif self.type == type_binary_classification:
             self.accuracy.append(Metrics.accuracy(y_true, y_pred))
@@ -114,7 +116,7 @@ class ModelMetric:
             
     def summary(self):
         cur_time = time.time()
-        if self.type == type_regresion:
+        if self.type == type_regression:
             print("MSE:", self.mse)
             self.save_mse_curve("mse_curve_" + str(cur_time) + ".png", "./fl/metric/plot")
         elif self.type == type_binary_classification:

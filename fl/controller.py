@@ -2,6 +2,10 @@ from tqdm import tqdm
 from fl.client import Client
 from fl.server import Server
 
+mode_avg_grad = "avg_grad"
+mode_avg_weight = "avg_weight"
+mode_avg_vote = "avg_vote"
+
 class FLController:
     def __init__(self, server: Server, clients: list[Client]):
         if len(clients) == 0:
@@ -13,19 +17,66 @@ class FLController:
     def aggregate_grads(self, grads):
         self.server.aggretate_gradients(grads)
 
-    def train(self, n_rounds):
+    def train(self, n_rounds, mode=mode_avg_grad):
+        if mode == mode_avg_grad:
+            self.avg_grad_train(n_rounds)
+        elif mode == mode_avg_weight:
+            self.avg_weight_train(n_rounds)
+        elif mode == mode_avg_vote:
+            self.avg_vote_train(n_rounds)
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
+
+    def avg_grad_train(self, n_rounds):
+        self.server.model.train()
         progress_bar = tqdm(range(n_rounds * self.n_clients))
         for round_idx in range(n_rounds):
             gradients = []
 
             for client_id in range(self.n_clients):
-                progress_bar.set_description(f"Training progress, round {round_idx + 1}, client {client_id + 1}")
+                progress_bar.set_description(f"Avg gradients training progress, round {round_idx + 1}, client {client_id + 1}")
                 client = self.clients[client_id]
+                client.update_model(self.server.model.state_dict())
                 client.train()
                 gradients.append(client.get_gradients())
                 progress_bar.update(1)
 
             self.aggregate_grads(gradients)
             self.server.eval(round_idx)
+        progress_bar.close()
+
+    def avg_weight_train(self, n_rounds):
+        self.server.model.train()
+        progress_bar = tqdm(range(n_rounds * self.n_clients))
+        for round_idx in range(n_rounds):
+            weights = []
+
+            for client_id in range(self.n_clients):
+                progress_bar.set_description(f"Avg weights training progress, round {round_idx + 1}, client {client_id + 1}")
+                client = self.clients[client_id]
+                client.update_model(self.server.model.state_dict().copy())
+                client.train()
+                weights.append(client.get_weights())
+                progress_bar.update(1)
+
+            self.server.aggregate_weights(weights)
+            self.server.eval(round_idx)
+        progress_bar.close()
+
+    def avg_vote_train(self, n_rounds):
+        # no need to train the server, just train the clients
+        progress_bar = tqdm(range(n_rounds * self.n_clients))
+        for round_idx in range(n_rounds):
+            for client_id in range(self.n_clients):
+                progress_bar.set_description(f"Avg vote training progress, round {round_idx + 1}, client {client_id + 1}")
+                client = self.clients[client_id]
+                client.train()
+                progress_bar.update(1)
+
+            test_loader = self.server.test_loader
+            client_result = []
+            for client in self.clients:
+                client_result.append(client.predict(test_loader))
+            self.server.aggregate_votes(client_result, round_idx)
         progress_bar.close()
         
