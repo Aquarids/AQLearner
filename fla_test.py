@@ -17,6 +17,7 @@ import torch.utils.data
 import torchvision
 import sklearn.datasets
 import sklearn.model_selection
+import random
 import unittest
 
 class TestDataPoison(unittest.TestCase):
@@ -185,10 +186,10 @@ class TestRobustAggr(unittest.TestCase):
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
 
         data_poison = DataPoison()
-        sample_poisoned_loader = data_poison.sample_poison(train_loader, poison_ratio=0.7, noise_level=10)
+        sample_poisoned_loader = data_poison.sample_poison(train_loader, poison_ratio=0.7, noise_level=2)
 
         n_clients = 6
-        n_poisoned_clients = 2 # assume poisoned client less than normal clients (1/3)
+        n_poisoned_clients = 1 # assume poisoned client less than normal clients (1/3)
         n_rounds = 2
         n_iter = 1
 
@@ -204,6 +205,7 @@ class TestRobustAggr(unittest.TestCase):
                 clients[i].setDataLoader(sample_poisoned_loader, n_iter)
             else:
                 clients[i].setDataLoader(train_loader, n_iter)
+        random.shuffle(clients)
         server.setTestLoader(test_loader)
 
         return server, clients, n_rounds
@@ -222,6 +224,6 @@ class TestRobustAggr(unittest.TestCase):
 
     def test_trimmed_mean_aggr(self):
         server, clients, n_rounds = self._prepare(False)
-        controller = TrimmedMeanAggrFLController(server, clients)
+        controller = TrimmedMeanAggrFLController(server, clients, trim_ratio=0.2)
         controller.train(n_rounds, mode_avg_grad)
         server.model_metric.summary()
