@@ -46,14 +46,15 @@ Here is a detailed list of the contents of this project, including the correspon
 | Cryptography | Zero-Knowledge Proofs              | Simple demonstration of zero-knowledge proofs for root_x and root_xv_inv challenges |
 | Cryptography | Secure Multi-Party Computation     | Demonstration of secure multi-party computation using ElGamal encryption |
 | Cryptography | Differential Privacy               | Demonstration of differential privacy using Laplacian noise |
-| Federated Learning | Privacy Intersection          | Simple demonstration of privacy intersection using hashing |
-| Federated Learning | Configuration Mapping          | Implementation of JSON configuration to PyTorch model mapping |
-| Federated Learning | Federated Learning             | Simple federated learning demonstration using gradient averaging, supports multi-party secure computation based on simple homomorphic encryption |
-| Blockchain | Block Class   | Simple block implementation based on Merkle Trees |
-| Blockchain | Node Class    | Implementation of simple light and full nodes    |
-| Blockchain | Transaction Class | Basic transaction entity class implementation  |
-| Blockchain | Network Class | Simple implementation of a simulated P2P network  |
-| Blockchain | Blockchain Implementation | Simple blockchain system implementation based on the above components |
+| Blockchain | Block Class                          | Simple block implementation based on Merkle Trees |
+| Blockchain | Node Class                           | Implementation of simple light and full nodes    |
+| Blockchain | Transaction Class                    | Basic transaction entity class implementation  |
+| Blockchain | Network Class                        | Simple implementation of a simulated P2P network  |
+| Blockchain | Blockchain Implementation            | Simple blockchain system implementation based on the above components |
+| Federated Learning | Privacy Intersection         | Simple demonstration of privacy intersection using hashing |
+| Federated Learning | Configuration Mapping        | Implementation of JSON configuration to PyTorch model mapping |
+| Federated Learning | Federated Learning           | Simple federated learning demonstration with support for average gradients, weidghts and votes |
+
 
 ## Usage
 
@@ -124,15 +125,14 @@ python -m unittest <test_file>.<test_class>.<test_method>
 | 密码学        | 零知识证明                   | 实现简单root_x和root_xv_inv挑战的零知识证明示意  |
 | 密码学        | 安全多方计算                 | 实现基于ElGamal加密的安全多方计算示意            |
 | 密码学        | 差分隐私                      | 实现拉普拉斯噪声的差分隐私示意                 |
-| 联邦学习      | 隐私求交                       | 基于哈希的简单隐私求交示意                    |
-| 联邦学习      | 配置映射                       | 实现JSON配置到PyTorch模型的映射               |
-| 联邦学习      | 联邦学习                       | 实现基于梯度平均的简单联邦学习示意，支持基于简单同态的多方安全计算      |
-| 联邦学习      | 联邦学习Metric工具类            | 实现每轮计算后的性能评估指标的工具类              |
 | 区块链        | 区块类                        | 基于Merkle树实现的简单区块模型                  |
 | 区块链        | 节点类                         | 实现简单的轻节点和全节点                         |
 | 区块链        | 交易类                         | 实现基础的交易实体类                             |
 | 区块链        | 网络类                        | 简单模拟P2P网络的实现                            |
 | 区块链        | 区块链整体实现                  | 基于上述组件的简单区块链系统实现                    |
+| 联邦学习      | 隐私求交                       | 基于哈希的简单隐私求交示意                    |
+| 联邦学习      | 配置映射                       | 实现JSON配置到PyTorch模型的映射               |
+| 联邦学习      | 联邦学习                       | 实现简单联邦学习示意，支持梯度、权重或投票的联邦平均  |
 
 ## 使用方法
 
