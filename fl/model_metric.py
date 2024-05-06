@@ -18,7 +18,7 @@ class ModelMetric:
         self.y_true_list = []
         self.y_pred_list = []
         self.y_prob_list = []
-        self.writer = self._get_data_writer()
+        self.data_file_name = f"pred_result_{time.time()}.xlsx"
 
         self.mse = []
         self.accuracy = []
@@ -30,32 +30,30 @@ class ModelMetric:
         self.auc = []
 
     def _get_data_writer(self):
-        cur_time = time.time()
         dir = "./fl/metric/data"
         if not os.path.exists(dir):
             os.makedirs(dir)
-        file_name = f"pred_result_{cur_time}.xlsx"
+        file_name = self.data_file_name
         writer = pd.ExcelWriter(os.path.join(dir, file_name))
         return writer
 
     def update(self, y_true, y_pred, y_prob, id_round):
         y_true, y_pred, y_prob = np.array(y_true).astype(float), np.array(y_pred).astype(float), np.array(y_prob)
-        
+
         self.y_true_list.append(y_true)
         self.y_pred_list.append(y_pred)
         if self.type == type_multi_classification:
             self.y_prob_list.append(y_prob)
         data = {
-            "y_true": y_true.flatten(),
-            "y_pred": y_pred.flatten()
+            "y_true": y_true,
+            "y_pred": y_pred,
         }
         if self.type == type_multi_classification or self.type == type_binary_classification:
-            data["y_prob"] = y_prob.flatten()
+            data["y_prob"] = [list(probs) for probs in y_prob]
         df = pd.DataFrame(data)
         sheet_name = f"round_{id_round}"
-        df.to_excel(self.writer, sheet_name=sheet_name, index=False)
-        self.writer.save()
-
+        with self._get_data_writer() as writer:
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
         self.caculate(y_true, y_pred, y_prob, id_round)
 
     def caculate(self, y_true, y_pred, y_prob, id_round):
@@ -135,4 +133,3 @@ class ModelMetric:
             print("F1:", self.f1)
             print("TPR:", self.tpr)
             print("FPR:", self.fpr)
-        self.writer.close()

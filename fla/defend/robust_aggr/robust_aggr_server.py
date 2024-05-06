@@ -28,41 +28,41 @@ class RobustAggrServer(Server):
         if grads is None or len(grads) == 0:
             return None
 
-        num_params = len(grads[0])
-        median_grads = [None] * num_params
+        aligned_grads = [list(param_grads) for param_grads in zip(*grads)]
+        grads = [param.grad for param in self.model.parameters()]
 
-        for param_idx in range(num_params):
-            param_grads = torch.stack([client_grads[param_idx] for client_grads in grads])
-            median_grad = torch.median(param_grads, dim=0)[0]
-            median_grads[param_idx] = median_grad
-
+        median_grads = []
+        for param_group in aligned_grads:
+            stacked_grads = torch.stack(param_group)
+            median = torch.median(stacked_grads, dim=0).values
+            median_grads.append(median)
+        
         return median_grads
 
     def trimmed_mean_aggr(self, grads, trim_ratio=0.1):
-        if not grads:
+        if grads is None or len(grads) == 0:
             return None
-
-        num_params = len(grads[0])
+        
+        num_parameters = len(grads[0])
         num_clients = len(grads)
         num_trim = int(num_clients * trim_ratio)
 
-        trimmed_mean_grads = [None] * num_params
+        if num_trim * 2 >= num_clients:
+            raise ValueError("Trim ratio too high for the number of clients")
 
-        for param_idx in range(num_params):
-            param_grads = torch.stack([client_grads[param_idx] for client_grads in grads])
-
+        aggregated_gradients = []
+        for i in range(num_parameters):
+            param_grads = torch.stack([client_grads[i] for client_grads in grads])
             flattened_grads = param_grads.view(param_grads.shape[0], -1)
-
             norms = torch.norm(flattened_grads, dim=1)
             sorted_indices = torch.argsort(norms)
 
-            if len(sorted_indices) > 2 * num_trim:
-                valid_indices = sorted_indices[num_trim:-num_trim]
-            else:
-                valid_indices = sorted_indices
+            valid_indices = sorted_indices[num_trim:-num_trim] if num_trim > 0 else sorted_indices
 
-            trimmed_grads = flattened_grads[valid_indices].mean(dim=0)
+            valid_grads = flattened_grads[valid_indices]
+            trimmed_mean = valid_grads.mean(dim=0)
 
-            trimmed_mean_grads[param_idx] = trimmed_grads.view(*param_grads.shape[1:])
+            trimmed_mean_reshaped = trimmed_mean.view(*param_grads.shape[1:])
+            aggregated_gradients.append(trimmed_mean_reshaped)
 
-        return trimmed_mean_grads
+        return aggregated_gradients

@@ -55,7 +55,6 @@ Here is a detailed list of the contents of this project, including the correspon
 | Federated Learning | Configuration Mapping        | Implementation of JSON configuration to PyTorch model mapping |
 | Federated Learning | Federated Learning           | Simple federated learning demonstration with support for average gradients, weidghts and votes |
 
-
 ## Usage
 
 - Clone the project：
