@@ -1,6 +1,7 @@
 from tqdm import tqdm
 from fl.client import Client
 from fl.server import Server
+import torch
 
 mode_avg_grad = "avg_grad"
 mode_avg_weight = "avg_weight"

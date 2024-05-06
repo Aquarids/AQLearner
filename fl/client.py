@@ -10,7 +10,7 @@ class Client:
         self.criterion = criterion
         self.optimizer = optimizer
         self.type = type
-        self.train_loaders = []
+        self.train_loaders = None
 
     def setDataLoader(self, train_loader, n_iters=10):
         self.n_iters = n_iters
@@ -18,11 +18,10 @@ class Client:
 
     def train(self):
         self.model.train()
-        train_loader = self.train_loader
 
-        progress_bar = tqdm(range(self.n_iters * len(train_loader)), desc="Client training progress")
+        progress_bar = tqdm(range(self.n_iters * len(self.train_loader)), desc="Client training progress")
         for _ in range(self.n_iters):
-            for X_batch, y_batch in train_loader:
+            for X_batch, y_batch in self.train_loader:
                 self.optimizer.zero_grad()
                 output = self.model(X_batch)
                 loss = self.criterion(output, y_batch)

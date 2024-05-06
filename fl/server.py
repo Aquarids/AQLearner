@@ -36,12 +36,11 @@ class Server:
             return
 
         grads = self.calculate_gradients(grads)
-        
+        self.model.train()
+        self.optimizer.zero_grad()
         for param, grad in zip(self.model.parameters(), grads):
             param.grad = grad
-
         self.optimizer.step()
-        self.optimizer.zero_grad()
 
     def calculate_weights(self, weights):
         if weights is None or len(weights) == 0:

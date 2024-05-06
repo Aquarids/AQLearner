@@ -9,6 +9,7 @@ from fl.client import Client
 from fl.server import Server
 from fl.controller import FLController, mode_avg_grad, mode_avg_weight, mode_avg_vote
 from fl.model_factory import ModelFactory
+from fl.model_factory import type_regression, type_binary_classification, type_multi_classification
 from fl.psi import SimplePSI
 
 class TestModelFactory(unittest.TestCase):
@@ -71,7 +72,7 @@ class TestFL(unittest.TestCase):
         X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=0.1, random_state=20)
 
         model_json = {
-            "model_type": "regression",
+            "model_type": type_regression,
             "learning_rate": 0.01,
             "optimizer": "adam",
             "criterion": "mse",
@@ -140,7 +141,7 @@ class TestFL(unittest.TestCase):
         X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=0.1, random_state=42)    
 
         model_json = {
-            "model_type": "binary_classification",
+            "model_type": type_binary_classification,
             "learning_rate": 0.01,
             "optimizer": "adam",
             "criterion": "bce",
@@ -173,7 +174,7 @@ class TestFL(unittest.TestCase):
         }
         model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
 
-        n_clients = 5
+        n_clients = 10
         clients = []
         for i in range(n_clients):
             # each client should have its own model

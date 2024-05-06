@@ -24,40 +24,22 @@ class ModelFactory:
         }
 
     def create_conv1d_layer(self, layer_info):
-        layer_activation_info = layer_info["activation"]
-        if layer_activation_info == "relu":
-            layer_activation = torch.nn.ReLU(inplace=True)
-        else:
-            raise ValueError(f"Unsupported activation: {layer_activation_info}")
-
-        return torch.nn.Sequential(
-            torch.nn.Conv1d(
+        return torch.nn.Conv1d(
                 in_channels=layer_info["in_channels"],
                 out_channels=layer_info["out_channels"],
                 kernel_size=layer_info["kernel_size"],
                 stride=layer_info["stride"],
                 padding=layer_info["padding"]
-            ),
-            layer_activation
-        )
+            )
     
     def create_conv2d_layer(self, layer_info):
-        layer_activation_info = layer_info["activation"]
-        if layer_activation_info == "relu":
-            layer_activation = torch.nn.ReLU(inplace=True)
-        else:
-            raise ValueError(f"Unsupported activation: {layer_activation_info}")
-
-        return torch.nn.Sequential(
-            torch.nn.Conv2d(
+        return torch.nn.Conv2d(
                 in_channels=layer_info["in_channels"],
                 out_channels=layer_info["out_channels"],
                 kernel_size=layer_info["kernel_size"],
                 stride=layer_info["stride"],
                 padding=layer_info["padding"]
-            ),
-            layer_activation
-        )
+            )
     
     def create_linear_layer(self, layer_info):
         return torch.nn.Linear(
