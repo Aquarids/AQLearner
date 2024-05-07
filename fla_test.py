@@ -149,6 +149,7 @@ class TestRobustAggr(unittest.TestCase):
         for _ in range(n_malicious_client):
             model, model_type, optimizer, criterion = ModelFactory().create_model(model_factory_json)
             client = MaliciousClient(model, criterion, optimizer, type=model_type, attack_type=attack_type)
+            client.setArgs(flip_ratio=0.7, num_classes=10, poison_ratio=0.7, noise_level=10)
             clients.append(client)
         random.shuffle(clients)
         return clients
@@ -169,7 +170,7 @@ class TestRobustAggr(unittest.TestCase):
                     "in_channels": 1,
                     "out_channels": 32,
                     "kernel_size": 3,
-                    "padding": 0,
+                    "padding": 1,
                     "stride": 1
                 },
                 {
@@ -274,19 +275,19 @@ class TestRobustAggr(unittest.TestCase):
         server.model_metric.summary()
     
     def normal_weight_compare(self):
-        server, clients, n_rounds = self._prepare(True)
+        server, clients, n_rounds = self._prepare(True, attack_weight_poison)
         controller = FLController(server, clients)
         controller.train(n_rounds, mode_avg_weight)
         server.model_metric.summary()
 
     def test_median_weight_aggr(self):
-        server, clients, n_rounds = self._prepare(False)
+        server, clients, n_rounds = self._prepare(False, attack_weight_poison)
         controller = MedianAggrFLController(server, clients)
         controller.train(n_rounds, mode_avg_weight)
         server.model_metric.summary()
 
     def test_trimmed_mean_weight_aggr(self):
-        server, clients, n_rounds = self._prepare(False)
+        server, clients, n_rounds = self._prepare(False, attack_weight_poison)
         controller = TrimmedMeanAggrFLController(server, clients, trim_ratio=0.2)
         controller.train(n_rounds, mode_avg_weight)
         server.model_metric.summary()
