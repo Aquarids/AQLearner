@@ -6,7 +6,7 @@ from fl.model_factory import type_regression, type_binary_classification, type_m
 from fla.malicious_client import MaliciousClient
 from fla.malicious_client import attack_type_none, attack_sample_poison, attack_label_flip, attack_ood_data, attack_backdoor, attack_gradient_poison, attack_weight_poison
 from fla.defend.robust_aggr.robust_aggr_server import RobustAggrServer
-from fla.defend.robust_aggr.robust_aggr_controller import MedianAggrFLController, TrimmedMeanAggrFLController
+from fla.defend.robust_aggr.robust_aggr_controller import MedianAggrFLController, TrimmedMeanAggrFLController, KrumAggrFLController
 from dl.simple_cnn_classifier import SimpleCNNClassifier
 from dl.simple_logistic_regression import SimpleLogisticRegression
 import dl.metrics as Metrics
@@ -238,9 +238,9 @@ class TestRobustAggr(unittest.TestCase):
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-        n_clients = 6
+        n_clients = 5
         n_malicious_client = 1 # assume poisoned client less than normal clients (1/3)
-        n_rounds = 10
+        n_rounds = 2
         n_iter = 1
 
         clients = self._init_clients(n_clients, n_malicious_client, self._model_json(), attack_type)
@@ -289,5 +289,19 @@ class TestRobustAggr(unittest.TestCase):
     def test_trimmed_mean_weight_aggr(self):
         server, clients, n_rounds = self._prepare(False, attack_weight_poison)
         controller = TrimmedMeanAggrFLController(server, clients, trim_ratio=0.2)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+    def normal_backdoor_attack(self):
+        server, clients, n_rounds = self._prepare(True, attack_backdoor)
+        controller = FLController(server, clients)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+        print("The odd round will trigger the backdoor attack, the accuracy will be lower than even round.")
+
+    def test_krum_weight_aggr(self):
+        server, clients, n_rounds = self._prepare(False, attack_backdoor)
+        controller = KrumAggrFLController(server, clients, n_malicious=1) # asume admin think there is 1 malicious client
         controller.train(n_rounds, mode_avg_weight)
         server.model_metric.summary()

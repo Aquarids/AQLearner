@@ -18,6 +18,20 @@ def binary_label_flip(loader):
 
     return torch.utils.data.DataLoader(torch.utils.data.TensorDataset(torch.cat(poisoned_samples, dim=0), torch.cat(poisoned_targets, dim=0)), batch_size=loader.batch_size, shuffle=False)
 
+def replace_label(loader, target_label: int, replace_label: int):
+    poisoned_samples = []
+    poisoned_targets = []
+
+    prgress_bar = tqdm(range(len(loader)), desc=f'Poisoning data: Replace label {target_label} to {replace_label}')
+    for data, target in loader:
+        target = torch.where(target == target_label, replace_label, target)
+        poisoned_samples.append(data)
+        poisoned_targets.append(target)
+        prgress_bar.update(1)
+    prgress_bar.close()
+
+    return torch.utils.data.DataLoader(torch.utils.data.TensorDataset(torch.cat(poisoned_samples, dim=0), torch.cat(poisoned_targets, dim=0)), batch_size=loader.batch_size, shuffle=False)
+
 def label_flip(loader, flip_ratio: float, num_classes: int):
     poisoned_samples = []
     poisoned_targets = []

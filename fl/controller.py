@@ -18,6 +18,12 @@ class FLController:
     def aggregate_grads(self, grads):
         self.server.aggretate_gradients(grads)
 
+    def aggregate_weights(self, weights):
+        self.server.aggregate_weights(weights)
+
+    def aggregate_votes(self, votes):
+        self.server.aggregate_votes(votes)
+
     def train(self, n_rounds, mode=mode_avg_grad):
         if mode == mode_avg_grad:
             self.avg_grad_train(n_rounds)
@@ -38,7 +44,7 @@ class FLController:
                 progress_bar.set_description(f"Avg gradients training progress, round {round_idx + 1}, client {client_id + 1}")
                 client = self.clients[client_id]
                 client.update_model(self.server.model.state_dict())
-                client.train()
+                client.train(round_idx)
                 gradients.append(client.get_gradients())
                 progress_bar.update(1)
 
@@ -56,11 +62,11 @@ class FLController:
                 progress_bar.set_description(f"Avg weights training progress, round {round_idx + 1}, client {client_id + 1}")
                 client = self.clients[client_id]
                 client.update_model(self.server.model.state_dict().copy())
-                client.train()
+                client.train(round_idx)
                 weights.append(client.get_weights())
                 progress_bar.update(1)
 
-            self.server.aggregate_weights(weights)
+            self.aggregate_weights(weights)
             self.server.eval(round_idx)
         progress_bar.close()
 
@@ -71,13 +77,13 @@ class FLController:
             for client_id in range(self.n_clients):
                 progress_bar.set_description(f"Avg vote training progress, round {round_idx + 1}, client {client_id + 1}")
                 client = self.clients[client_id]
-                client.train()
+                client.train(round_idx)
                 progress_bar.update(1)
 
             test_loader = self.server.test_loader
             client_result = []
             for client in self.clients:
                 client_result.append(client.predict(test_loader))
-            self.server.aggregate_votes(client_result, round_idx)
+            self.aggregate_votes(client_result, round_idx)
         progress_bar.close()
         

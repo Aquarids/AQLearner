@@ -16,7 +16,7 @@ class Client:
         self.n_iters = n_iters
         self.train_loader = train_loader
 
-    def train(self):
+    def train(self, round_idx=-1):
         self.model.train()
 
         progress_bar = tqdm(range(self.n_iters * len(self.train_loader)), desc="Client training progress")

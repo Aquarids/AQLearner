@@ -1,10 +1,12 @@
 from fl.server import Server
 
 import torch
+import numpy as np
 
 type_aggr_avg = "avg"
 type_aggr_median = "median"
 type_aggr_trimmed_mean = "trimmed_mean"
+type_aggr_krum = "krum"
 
 class RobustAggrServer(Server):
     def __init__(self, model, optimizer, criterion, type):
@@ -21,7 +23,7 @@ class RobustAggrServer(Server):
         if type_aggr == type_aggr_median:
             return self.grad_median_aggr(grads)
         elif type_aggr == type_aggr_trimmed_mean:
-            return self.grad_trimmed_mean_aggr(grads, **kwargs)
+            return self.grad_trimmed_mean_aggr(grads, kwargs["trim_ratio"])
         else:
             return super().calculate_gradients(grads)
     
@@ -78,7 +80,9 @@ class RobustAggrServer(Server):
         if type_aggr == type_aggr_median:
             return self.weight_median_aggr(weights)
         elif type_aggr == type_aggr_trimmed_mean:
-            return self.weight_trimmed_mean_aggr(weights, **kwargs)
+            return self.weight_trimmed_mean_aggr(weights, kwargs["trim_ratio"])
+        elif type_aggr == type_aggr_krum:
+            return self.weight_krum_aggr(weights, kwargs["n_malicious"])
         else:
             return super().calculate_weights(weights)
         
@@ -86,13 +90,19 @@ class RobustAggrServer(Server):
         if weights is None or len(weights) == 0:
             return None
 
-        aligned_weights = [list(param_weights) for param_weights in zip(*weights)]
         new_weights = {}
-        for key, param_group in aligned_weights:
+
+        if len(weights) > 0 and isinstance(weights[0], dict):
+            keys = weights[0].keys()
+        else:
+            return None
+
+        for key in keys:
+            param_group = [client_weights[key] for client_weights in weights if key in client_weights]
             stacked_weights = torch.stack(param_group)
             median = torch.median(stacked_weights, dim=0).values
             new_weights[key] = median
-        
+
         return new_weights
     
     def weight_trimmed_mean_aggr(self, weights, trim_ratio=0.1):
@@ -105,18 +115,17 @@ class RobustAggrServer(Server):
         if num_trim * 2 >= num_clients:
             raise ValueError("Trim ratio too high for the number of clients")
 
-        avg_weights = {}
+        align_weights = {}
         for client_weights in weights:
             if client_weights is None:
                 continue
             for key, value in client_weights.items():
-                if key not in avg_weights:
-                    avg_weights[key] = [value]
-                else:
-                    avg_weights[key].append(value)
+                if key not in align_weights:
+                    align_weights[key] = []
+                align_weights[key].append(value)
         
         new_weights = {}
-        for key, param_group in avg_weights.items():
+        for key, param_group in align_weights.items():
             stacked_weights = torch.stack(param_group)
             flattened_weights = stacked_weights.view(stacked_weights.shape[0], -1)
             norms = torch.norm(flattened_weights, dim=1)
@@ -131,3 +140,24 @@ class RobustAggrServer(Server):
             new_weights[key] = trimmed_mean_reshaped
         
         return new_weights
+    
+    def weight_krum_aggr(self, weights, n_malicious=1):
+        scores = []
+        n_clients = len(weights)
+
+        for i in range(n_clients):
+            distances = []
+            for j in range(n_clients):
+                if i == j:
+                    continue
+                distance = np.linalg.norm(weights[i] - weights[j])
+                distances.append(distance)
+
+            distances.sort()
+            krum_score = sum(distances[:n_clients - n_malicious - 2])
+            scores.append(krum_score)
+
+        chosen_index = np.argmin(scores)
+        return weights[chosen_index]
+
+
