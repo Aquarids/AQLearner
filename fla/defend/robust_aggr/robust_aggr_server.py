@@ -2,6 +2,7 @@ from fl.server import Server
 
 import torch
 
+type_aggr_avg = "avg"
 type_aggr_median = "median"
 type_aggr_trimmed_mean = "trimmed_mean"
 
@@ -18,13 +19,13 @@ class RobustAggrServer(Server):
 
     def calculate_gradients(self, grads, type_aggr, **kwargs):
         if type_aggr == type_aggr_median:
-            return self.median_aggr(grads)
+            return self.grad_median_aggr(grads)
         elif type_aggr == type_aggr_trimmed_mean:
-            return self.trimmed_mean_aggr(grads, **kwargs)
+            return self.grad_trimmed_mean_aggr(grads, **kwargs)
         else:
             return super().calculate_gradients(grads)
     
-    def median_aggr(self, grads):
+    def grad_median_aggr(self, grads):
         if grads is None or len(grads) == 0:
             return None
 
@@ -39,7 +40,7 @@ class RobustAggrServer(Server):
         
         return median_grads
 
-    def trimmed_mean_aggr(self, grads, trim_ratio=0.1):
+    def grad_trimmed_mean_aggr(self, grads, trim_ratio=0.1):
         if grads is None or len(grads) == 0:
             return None
         
@@ -66,3 +67,67 @@ class RobustAggrServer(Server):
             aggregated_gradients.append(trimmed_mean_reshaped)
 
         return aggregated_gradients
+    
+    def aggregate_weights(self, weights, type_aggr, **kwargs):
+        new_weights = self.calculate_weights(weights, type_aggr, **kwargs)
+        if new_weights is None:
+            return
+        self.model.load_state_dict(new_weights, strict=False)
+        
+    def calculate_weights(self, weights, type_aggr, **kwargs):
+        if type_aggr == type_aggr_median:
+            return self.weight_median_aggr(weights)
+        elif type_aggr == type_aggr_trimmed_mean:
+            return self.weight_trimmed_mean_aggr(weights, **kwargs)
+        else:
+            return super().calculate_weights(weights)
+        
+    def weight_median_aggr(self, weights):
+        if weights is None or len(weights) == 0:
+            return None
+
+        aligned_weights = [list(param_weights) for param_weights in zip(*weights)]
+        new_weights = {}
+        for key, param_group in aligned_weights:
+            stacked_weights = torch.stack(param_group)
+            median = torch.median(stacked_weights, dim=0).values
+            new_weights[key] = median
+        
+        return new_weights
+    
+    def weight_trimmed_mean_aggr(self, weights, trim_ratio=0.1):
+        if weights is None or len(weights) == 0:
+            return None
+
+        num_clients = len(weights)
+        num_trim = int(num_clients * trim_ratio)
+
+        if num_trim * 2 >= num_clients:
+            raise ValueError("Trim ratio too high for the number of clients")
+
+        avg_weights = {}
+        for client_weights in weights:
+            if client_weights is None:
+                continue
+            for key, value in client_weights.items():
+                if key not in avg_weights:
+                    avg_weights[key] = [value]
+                else:
+                    avg_weights[key].append(value)
+        
+        new_weights = {}
+        for key, param_group in avg_weights.items():
+            stacked_weights = torch.stack(param_group)
+            flattened_weights = stacked_weights.view(stacked_weights.shape[0], -1)
+            norms = torch.norm(flattened_weights, dim=1)
+            sorted_indices = torch.argsort(norms)
+
+            valid_indices = sorted_indices[num_trim:-num_trim] if num_trim > 0 else sorted_indices
+
+            valid_weights = flattened_weights[valid_indices]
+            trimmed_mean = valid_weights.mean(dim=0)
+
+            trimmed_mean_reshaped = trimmed_mean.view(*stacked_weights.shape[1:])
+            new_weights[key] = trimmed_mean_reshaped
+        
+        return new_weights

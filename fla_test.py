@@ -3,13 +3,13 @@ from fl.server import Server
 from fl.controller import FLController, mode_avg_grad, mode_avg_weight, mode_avg_vote
 from fl.model_factory import ModelFactory
 from fl.model_factory import type_regression, type_binary_classification, type_multi_classification
+from fla.malicious_client import MaliciousClient
+from fla.malicious_client import attack_type_none, attack_sample_poison, attack_label_flip, attack_ood_data, attack_backdoor, attack_gradient_poison, attack_weight_poison
 from fla.defend.robust_aggr.robust_aggr_server import RobustAggrServer
 from fla.defend.robust_aggr.robust_aggr_controller import MedianAggrFLController, TrimmedMeanAggrFLController
 from dl.simple_cnn_classifier import SimpleCNNClassifier
 from dl.simple_logistic_regression import SimpleLogisticRegression
 import dl.metrics as Metrics
-
-from fla.data_poison import DataPoison
 
 import numpy as np
 import torch
@@ -29,36 +29,43 @@ class TestDataPoison(unittest.TestCase):
         train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_train, y_train), batch_size=10, shuffle=True)
         test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(X_test, y_test), batch_size=10, shuffle=False)
 
-        data_poison = DataPoison()
-        poisoned_loader = data_poison.binary_label_flip(train_loader)
         num_features = X_train.shape[1]
-
-        print("Normal training")
-        model = SimpleLogisticRegression(num_features, 1)
-        model.fit(train_loader, n_iters=10)
-        y_pred, _ = model.predict(test_loader)
 
         y_test = []
         for _, y in test_loader:
             y_test += y.tolist()
+
+        print("Normal training")
+        model = SimpleLogisticRegression(num_features, 1)
+        normal_client = Client(model, torch.nn.BCELoss(), torch.optim.Adam(model.parameters(), lr=0.01), type=type_binary_classification)
+        normal_client.setDataLoader(train_loader, n_iters=1)
+        normal_client.train()
+
+        y_pred, _ = normal_client.predict(test_loader)
         normal_accuracy = Metrics.accuracy(np.array(y_test), np.array(y_pred))
 
         print("Poison training")
         poisoned_model = SimpleLogisticRegression(num_features, 1)
-        poisoned_model.fit(poisoned_loader, n_iters=10)
-        poisoned_y_pred, _ = poisoned_model.predict(test_loader)
+        poisoned_client = MaliciousClient(poisoned_model, torch.nn.BCELoss(), torch.optim.Adam(poisoned_model.parameters(), lr=0.01), type=type_binary_classification, attack_type=attack_label_flip)
+        poisoned_client.setDataLoader(train_loader, n_iters=1)
+        poisoned_client.train()
 
+        poisoned_y_pred, _ = poisoned_client.predict(test_loader)
         poisoned_accuracy = Metrics.accuracy(np.array(y_test), np.array(poisoned_y_pred))
 
         print("Normal accuracy: ", normal_accuracy)
         print("Poison accuracy: ", poisoned_accuracy)
         print("Diff accuracy: ", normal_accuracy - poisoned_accuracy)
 
-    def train(self, train_loader, test_loader, name):
-        print(f"{name} Training")
+    def train(self, train_loader, test_loader, attack_type, tag):
+        print(f"{tag} Training")
         model = SimpleCNNClassifier()
-        model.fit(train_loader, n_iters=1)
-        y_pred, _ = model.predict(test_loader)
+        client = MaliciousClient(model, torch.nn.CrossEntropyLoss(), torch.optim.Adam(model.parameters(), lr=0.01), type=type_multi_classification, attack_type=attack_type)
+        client.setArgs(flip_ratio=0.7, num_classes=10, poison_ratio=0.7, noise_level=10)
+        client.setDataLoader(train_loader, n_iters=1)
+        client.train()
+
+        y_pred, _ = client.predict(test_loader)
 
         y_test = []
         for _, y in test_loader:
@@ -81,28 +88,69 @@ class TestDataPoison(unittest.TestCase):
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
 
-        data_poison = DataPoison()
-        label_flip_loader = data_poison.label_flip(train_loader, flip_ratio=0.7, num_classes=10)
-        sample_poisoned_loader = data_poison.sample_poison(train_loader, poison_ratio=0.7, noise_level=10)
-        ood_data_loader = data_poison.ood_data(train_loader, poison_ratio=0.7)
-
-        normal_accuracy = self.train(train_loader, test_loader, "Normal")
-        label_flip_accuracy = self.train(label_flip_loader, test_loader, "Label Flip")
-        sample_poisoned_accuracy = self.train(sample_poisoned_loader, test_loader, "Sample Poison")
-        ood_data_accuracy = self.train(ood_data_loader, test_loader, "OOD Data")
+        normal_accuracy = self.train(train_loader, test_loader, attack_type_none, "Normal")
+        label_flip_accuracy = self.train(train_loader, test_loader, attack_label_flip, "Label Flip")
+        sample_poisoned_accuracy = self.train(train_loader, test_loader, attack_sample_poison, "Sample Poison")
+        ood_data_accuracy = self.train(train_loader, test_loader, attack_ood_data, "OOD Data")
 
         print("Normal accuracy: ", normal_accuracy)
         print("Label Flip accuracy: ", label_flip_accuracy)
         print("Sample Poison accuracy: ", sample_poisoned_accuracy)
         print("OOD Data accuracy: ", ood_data_accuracy)
 
+class TestModelPoison(unittest.TestCase):
+    def train(self, train_loader, test_loader, attack_type, tag):
+        print(f"{tag} Training")
+        model = SimpleCNNClassifier()
+        client = MaliciousClient(model, torch.nn.CrossEntropyLoss(), torch.optim.Adam(model.parameters(), lr=0.01), type=type_multi_classification, attack_type=attack_type)
+        client.setArgs(flip_ratio=0.7, num_classes=10, poison_ratio=0.7, noise_level=10)
+        client.setDataLoader(train_loader, n_iters=1)
+        client.train()
+
+        y_pred, _ = client.predict(test_loader)
+
+        y_test = []
+        for _, y in test_loader:
+            y_test += y.tolist()
+        accuracy = Metrics.accuracy(np.array(y_test), np.array(y_pred))
+        return accuracy
+    
+    def test_model_poison(self):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((28, 28)),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5,), (0.5,))
+        ])
+
+        train_dataset = torchvision.datasets.MNIST(root='./data', train=True,
+                                                download=True, transform=transform)
+        test_dataset = torchvision.datasets.MNIST(root='./data', train=False,
+                                                download=True, transform=transform)
+
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+        normal_accuracy = self.train(train_loader, test_loader, attack_type_none, "Normal")
+        gradient_poision_accuracy = self.train(train_loader, test_loader, attack_gradient_poison, "Gradient Poison")
+        weight_poison_accuracy = self.train(train_loader, test_loader, attack_weight_poison, "Weight Poison")
+
+        print("Normal accuracy: ", normal_accuracy)
+        print("Gradient Poison accuracy: ", gradient_poision_accuracy)
+        print("Weight Poison accuracy: ", weight_poison_accuracy)
+
+
 class TestRobustAggr(unittest.TestCase):
-    def _init_clients(self, n_clients, model_factory_json):
+    def _init_clients(self, n_clients, n_malicious_client, model_factory_json, attack_type):
         clients = []
-        for _ in range(n_clients):
+        for _ in range(n_clients - n_malicious_client):
             model, model_type, optimizer, criterion = ModelFactory().create_model(model_factory_json)
             client = Client(model, criterion, optimizer, type=model_type)
             clients.append(client)
+        for _ in range(n_malicious_client):
+            model, model_type, optimizer, criterion = ModelFactory().create_model(model_factory_json)
+            client = MaliciousClient(model, criterion, optimizer, type=model_type, attack_type=attack_type)
+            clients.append(client)
+        random.shuffle(clients)
         return clients
     
     def _init_server(self, model_factory_json):
@@ -121,9 +169,11 @@ class TestRobustAggr(unittest.TestCase):
                     "in_channels": 1,
                     "out_channels": 32,
                     "kernel_size": 3,
-                    "padding": 1,
-                    "activation": "relu",
+                    "padding": 0,
                     "stride": 1
+                },
+                {
+                    "type": "relu"
                 },
                 {
                     "type": "maxpool",
@@ -137,8 +187,10 @@ class TestRobustAggr(unittest.TestCase):
                     "out_channels": 64,
                     "kernel_size": 3,
                     "padding": 1,
-                    "activation": "relu",
                     "stride": 1
+                },
+                {
+                    "type": "relu"
                 },
                 {
                     "type": "maxpool",
@@ -170,7 +222,7 @@ class TestRobustAggr(unittest.TestCase):
             ]
         }
     
-    def _prepare(self, compare):
+    def _prepare(self, compare, attack_type):
         transform = torchvision.transforms.Compose([
             torchvision.transforms.Resize((28, 28)),
             torchvision.transforms.ToTensor(),
@@ -185,15 +237,12 @@ class TestRobustAggr(unittest.TestCase):
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-        data_poison = DataPoison()
-        sample_poisoned_loader = data_poison.sample_poison(train_loader, poison_ratio=0.7, noise_level=2)
-
         n_clients = 6
-        n_poisoned_clients = 1 # assume poisoned client less than normal clients (1/3)
-        n_rounds = 2
+        n_malicious_client = 1 # assume poisoned client less than normal clients (1/3)
+        n_rounds = 10
         n_iter = 1
 
-        clients = self._init_clients(n_clients, self._model_json())
+        clients = self._init_clients(n_clients, n_malicious_client, self._model_json(), attack_type)
         model, model_type, optimizer, criterion = ModelFactory().create_model(self._model_json())
         if compare:
             server = Server(model, optimizer, criterion, model_type)
@@ -201,29 +250,43 @@ class TestRobustAggr(unittest.TestCase):
             server = RobustAggrServer(model, optimizer, criterion, model_type)
         
         for i in range(n_clients):
-            if i < n_poisoned_clients:
-                clients[i].setDataLoader(sample_poisoned_loader, n_iter)
-            else:
-                clients[i].setDataLoader(train_loader, n_iter)
-        random.shuffle(clients)
+            clients[i].setDataLoader(train_loader, n_iter)
         server.setTestLoader(test_loader)
 
         return server, clients, n_rounds
     
-    def normal_compare(self):
-        server, clients, n_rounds = self._prepare(True)
+    def normal_grad_compare(self):
+        server, clients, n_rounds = self._prepare(True, attack_sample_poison)
         controller = FLController(server, clients)
         controller.train(n_rounds, mode_avg_grad)
         server.model_metric.summary()
         
-    def test_median_aggr(self):
-        server, clients, n_rounds = self._prepare(False)
+    def test_median_grad_aggr(self):
+        server, clients, n_rounds = self._prepare(False, attack_sample_poison)
         controller = MedianAggrFLController(server, clients)
         controller.train(n_rounds, mode_avg_grad)
         server.model_metric.summary()
 
-    def test_trimmed_mean_aggr(self):
-        server, clients, n_rounds = self._prepare(False)
+    def test_trimmed_mean_grad_aggr(self):
+        server, clients, n_rounds = self._prepare(False, attack_sample_poison)
         controller = TrimmedMeanAggrFLController(server, clients, trim_ratio=0.2)
         controller.train(n_rounds, mode_avg_grad)
+        server.model_metric.summary()
+    
+    def normal_weight_compare(self):
+        server, clients, n_rounds = self._prepare(True)
+        controller = FLController(server, clients)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+    def test_median_weight_aggr(self):
+        server, clients, n_rounds = self._prepare(False)
+        controller = MedianAggrFLController(server, clients)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+    def test_trimmed_mean_weight_aggr(self):
+        server, clients, n_rounds = self._prepare(False)
+        controller = TrimmedMeanAggrFLController(server, clients, trim_ratio=0.2)
+        controller.train(n_rounds, mode_avg_weight)
         server.model_metric.summary()

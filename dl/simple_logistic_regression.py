@@ -6,7 +6,7 @@ class SimpleLogisticRegression(torch.nn.Module):
         super(SimpleLogisticRegression, self).__init__()
         self.linear = torch.nn.Linear(input_size, output_size)
 
-    def _forward(self, x):
+    def forward(self, x):
         return torch.sigmoid(self.linear(x))
     
     def fit(self, loader, learning_rate=0.01, n_iters=10):
@@ -17,7 +17,7 @@ class SimpleLogisticRegression(torch.nn.Module):
         for _ in range(n_iters):
             for X, y in loader:
                 optimizer.zero_grad()
-                outputs = self._forward(X)
+                outputs = self.forward(X)
                 loss = criterion(outputs, y)
                 loss.backward()
                 optimizer.step()
@@ -30,7 +30,7 @@ class SimpleLogisticRegression(torch.nn.Module):
             predictions = []
             possibilities = []
             for X, _ in loader:
-                possiblity = self._forward(X)
+                possiblity = self.forward(X)
                 possibilities += possiblity.tolist()
                 predictions += torch.where(possiblity >= 0.5, 1, 0).tolist()
             return predictions, possiblity

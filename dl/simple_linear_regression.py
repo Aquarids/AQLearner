@@ -6,7 +6,7 @@ class SimpleLinearRegression(torch.nn.Module):
         super(SimpleLinearRegression, self).__init__()
         self.linear = torch.nn.Linear(input_size, output_size)
 
-    def _forward(self, x):
+    def forward(self, x):
         return self.linear(x)
     
     def fit(self, X, y, learning_rate=0.01, n_iters=1000):
@@ -16,7 +16,7 @@ class SimpleLinearRegression(torch.nn.Module):
         progress_bar = tqdm(range(n_iters), desc="Training progress")
         for _ in progress_bar:
             optimizer.zero_grad()
-            outputs = self._forward(X)
+            outputs = self.forward(X)
             loss = criterion(outputs, y)
             loss.backward()
             optimizer.step()
@@ -26,7 +26,7 @@ class SimpleLinearRegression(torch.nn.Module):
     def predict(self, X):
         self.eval()
         with torch.no_grad():
-            return self._forward(X)
+            return self.forward(X)
         
     def summary(self):
         print("Model Detail: ", self)        
