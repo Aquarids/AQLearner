@@ -4,8 +4,14 @@ import numpy as np
 from fl.model_metric import ModelMetric
 from fl.model_factory import type_regression, type_binary_classification, type_multi_classification
 
+
 class Server:
-    def __init__(self, model: torch.nn.Module, optimizer, criterion, type=type_regression):
+
+    def __init__(self,
+                 model: torch.nn.Module,
+                 optimizer,
+                 criterion,
+                 type=type_regression):
         self.model = model
         self.optimizer = optimizer
         self.criterion = criterion
@@ -30,7 +36,7 @@ class Server:
 
         avg_grad = [grad / num_clients for grad in avg_grad]
         return avg_grad
-        
+
     def aggretate_gradients(self, grads):
         if grads is None:
             return
@@ -57,12 +63,12 @@ class Server:
                     avg_weights[key] = value.clone()
                 else:
                     avg_weights[key] += value
-        
+
         for key in avg_weights:
             avg_weights[key] /= num_clients
-        
+
         return avg_weights
-            
+
     def aggregate_weights(self, weights):
         if weights is None:
             return
@@ -70,7 +76,7 @@ class Server:
         weights = self.calculate_weights(weights)
         if weights is None:
             return
-        
+
         self.model.load_state_dict(weights, strict=False)
 
     def calculate_votes(self, client_results):
@@ -78,47 +84,49 @@ class Server:
             return None
 
         batch_size = len(client_results[0][0])
-        
+
         aggregated_predictions = [0] * batch_size
-        aggregated_probabilities = [0] * batch_size
-        
+
         for i in range(batch_size):
-            batch_preds = [client_result[0][i] for client_result in client_results]
-            
+            batch_preds = [
+                client_result[i] for client_result in client_results
+            ]
+
             if self.type == type_regression:
                 aggregated_predictions[i] = np.mean(batch_preds)
-                aggregated_probabilities[i] = []
             else:
-                batch_probs = [client_result[1][i] for client_result in client_results]
                 values, counts = np.unique(batch_preds, return_counts=True)
                 max_index = np.argmax(counts)
                 aggregated_predictions[i] = values[max_index]
-                aggregated_probabilities[i] = np.mean(batch_probs, axis=0)
 
-        adjusted_predictions = [[pred] for pred in aggregated_predictions] # in order to compare with test loader
-        return adjusted_predictions, aggregated_probabilities
-        
+        # in order to compare with test loader
+        adjusted_predictions = [[pred] for pred in aggregated_predictions]
+
+        return adjusted_predictions
+
     def aggregate_votes(self, votes, round_idx):
         if votes is None:
             return
 
-        aggregated_predictions, averaged_probabilities = self.calculate_votes(votes)
+        aggregated_predictions = self.calculate_votes(votes)
         y_test_value = []
         for _, y in self.test_loader:
             y_test_value += y.tolist()
 
-        self.model_metric.update(y_test_value, aggregated_predictions, averaged_probabilities, round_idx)
+        self.model_metric.update(y_test_value, aggregated_predictions, None,
+                                 round_idx)
 
     def eval(self, round_idx):
         y_pred_value, y_prob_value = self.predict(self.test_loader)
         y_test_value = []
         for _, y in self.test_loader:
             y_test_value += y.tolist()
-        self.model_metric.update(y_test_value, y_pred_value, y_prob_value, round_idx)
+        self.model_metric.update(y_test_value, y_pred_value, y_prob_value,
+                                 round_idx)
 
     def get_model(self):
         return self.model
-    
+
     def predict(self, loader):
         self.model.eval()
         with torch.no_grad():
@@ -132,17 +140,20 @@ class Server:
                 elif type_binary_classification == self.type:
                     possiblity = self.model(X)
                     possibilities += possiblity.tolist()
-                    predictions += torch.where(possiblity >= 0.5, 1, 0).tolist()
+                    predictions += torch.where(possiblity >= 0.5, 1,
+                                               0).tolist()
                 elif type_regression == self.type:
                     possiblity = None
                     predictions += self.model(X).tolist()
             return predictions, possibilities
-        
+
     def summary(self):
         self.model_metric.summary()
-        print("Global model: ", self.model)   
+        print("Global model: ", self.model)
         total_params = sum(p.numel() for p in self.model.parameters())
         print(f"Total Parameters: {total_params}")
         for name, param in self.model.named_parameters():
             if param.requires_grad:
-                print(f"Layer: {name}, Size: {param.size()}, Values: {param.data}")
+                print(
+                    f"Layer: {name}, Size: {param.size()}, Values: {param.data}"
+                )

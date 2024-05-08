@@ -7,7 +7,10 @@ mode_avg_grad = "avg_grad"
 mode_avg_weight = "avg_weight"
 mode_avg_vote = "avg_vote"
 
+
+# assume controller as net to control the training process
 class FLController:
+
     def __init__(self, server: Server, clients: list[Client]):
         if len(clients) == 0:
             raise ValueError("Clients can not be empty")
@@ -21,8 +24,8 @@ class FLController:
     def aggregate_weights(self, weights):
         self.server.aggregate_weights(weights)
 
-    def aggregate_votes(self, votes):
-        self.server.aggregate_votes(votes)
+    def aggregate_votes(self, votes, round_idx):
+        self.server.aggregate_votes(votes, round_idx)
 
     def train(self, n_rounds, mode=mode_avg_grad):
         if mode == mode_avg_grad:
@@ -41,7 +44,9 @@ class FLController:
             gradients = []
 
             for client_id in range(self.n_clients):
-                progress_bar.set_description(f"Avg gradients training progress, round {round_idx + 1}, client {client_id + 1}")
+                progress_bar.set_description(
+                    f"Avg gradients training progress, round {round_idx + 1}, client {client_id + 1}"
+                )
                 client = self.clients[client_id]
                 client.update_model(self.server.model.state_dict())
                 client.train(round_idx)
@@ -59,7 +64,9 @@ class FLController:
             weights = []
 
             for client_id in range(self.n_clients):
-                progress_bar.set_description(f"Avg weights training progress, round {round_idx + 1}, client {client_id + 1}")
+                progress_bar.set_description(
+                    f"Avg weights training progress, round {round_idx + 1}, client {client_id + 1}"
+                )
                 client = self.clients[client_id]
                 client.update_model(self.server.model.state_dict().copy())
                 client.train(round_idx)
@@ -75,7 +82,9 @@ class FLController:
         progress_bar = tqdm(range(n_rounds * self.n_clients))
         for round_idx in range(n_rounds):
             for client_id in range(self.n_clients):
-                progress_bar.set_description(f"Avg vote training progress, round {round_idx + 1}, client {client_id + 1}")
+                progress_bar.set_description(
+                    f"Avg vote training progress, round {round_idx + 1}, client {client_id + 1}"
+                )
                 client = self.clients[client_id]
                 client.train(round_idx)
                 progress_bar.update(1)
@@ -83,7 +92,6 @@ class FLController:
             test_loader = self.server.test_loader
             client_result = []
             for client in self.clients:
-                client_result.append(client.predict(test_loader))
+                client_result.append(client.get_vote(test_loader))
             self.aggregate_votes(client_result, round_idx)
         progress_bar.close()
-        

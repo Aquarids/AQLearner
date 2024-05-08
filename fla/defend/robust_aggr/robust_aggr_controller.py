@@ -6,7 +6,6 @@ from tqdm import tqdm
 class MedianAggrFLController(FLController):
     def __init__(self, server: RobustAggrServer, clients):
         super().__init__(server, clients)
-        self.server = server
 
     def aggregate_grads(self, grads):
         self.server.aggretate_gradients(grads, type_aggr_median)
@@ -18,7 +17,6 @@ class TrimmedMeanAggrFLController(FLController):
     def __init__(self, server: RobustAggrServer, clients, trim_ratio=0.1):
         super().__init__(server, clients)
         self.trim_ratio = trim_ratio
-        self.server = server
 
     def aggregate_grads(self, grads):
         self.server.aggretate_gradients(grads, type_aggr_trimmed_mean, trim_ratio=self.trim_ratio)
@@ -30,7 +28,6 @@ class KrumAggrFLController(FLController):
     def __init__(self, server: RobustAggrServer, clients, n_malicious=1):
         super().__init__(server, clients)
         self.n_malicious = n_malicious
-        self.server = server
 
     def aggregate_weights(self, weights):
         self.server.aggregate_weights(weights, type_aggr_krum, n_malicious=self.n_malicious)

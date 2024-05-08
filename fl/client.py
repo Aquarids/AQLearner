@@ -4,8 +4,14 @@ from tqdm import tqdm
 
 from fl.model_factory import type_regression, type_binary_classification, type_multi_classification
 
+
 class Client:
-    def __init__(self, model: torch.nn.Module, criterion, optimizer, type=type_regression):
+
+    def __init__(self,
+                 model: torch.nn.Module,
+                 criterion,
+                 optimizer,
+                 type=type_regression):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -19,7 +25,8 @@ class Client:
     def train(self, round_idx=-1):
         self.model.train()
 
-        progress_bar = tqdm(range(self.n_iters * len(self.train_loader)), desc="Client training progress")
+        progress_bar = tqdm(range(self.n_iters * len(self.train_loader)),
+                            desc="Client training progress")
         for _ in range(self.n_iters):
             for X_batch, y_batch in self.train_loader:
                 self.optimizer.zero_grad()
@@ -29,14 +36,18 @@ class Client:
                 self.optimizer.step()
                 progress_bar.update(1)
         progress_bar.close()
-    
+
     def get_gradients(self):
         grads = [param.grad for param in self.model.parameters()]
         return grads
 
     def get_weights(self):
         return self.model.state_dict().copy()
-    
+
+    def get_vote(self, loader):
+        y_pred, _ = self.predict(loader)
+        return y_pred
+
     def update_model(self, state_dict):
         self.model.load_state_dict(state_dict)
 
@@ -53,7 +64,8 @@ class Client:
                 elif type_binary_classification == self.type:
                     possiblity = self.model(X)
                     possibilities += possiblity.tolist()
-                    predictions += torch.where(possiblity >= 0.5, 1, 0).tolist()
+                    predictions += torch.where(possiblity >= 0.5, 1,
+                                               0).tolist()
                 elif type_regression == self.type:
                     possiblity = None
                     predictions += self.model(X).tolist()

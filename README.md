@@ -57,7 +57,8 @@ Here is a detailed list of the contents of this project, including the correspon
 | Federated Learning Attack & Defend | Data Poison  | Simple implementation of label flipping, sample poisoning and out of distribution data increasing |
 | Federated Learning Attack & Defend | Model Poison | Simple implementation of poisoned gradients and poisoned weights |
 | Federated Learning Attack & Defend | Backdoor Attack | Simple implementation of backdoor attacking |
-| Federated Learning Attack & Defend | Robust Aggregation | Simple implementation median, trimmed mean and krum aggregation |
+| Federated Learning Attack & Defend | Robust Aggregation | Simple implementation of median, trimmed mean and krum aggregation |
+| Federated Learning Attack & Defend | MPC | Simple implementation of MPC by adding noise to gradients or weights|
 
 ## Usage
 
@@ -140,6 +141,7 @@ python -m unittest <test_file>.<test_class>.<test_method>
 | 联邦学习攻防   | 模型投毒                      | 实现简单的梯度投毒和权重投毒 |
 | 联邦学习攻防   | 后门攻击                      | 实现简单的条件后门攻击 |
 | 联邦学习攻防   | 稳健聚合                      | 实现简单的中值、截尾均值和Krum聚合 |
+| 联邦学习攻防   | 多方安全计算                   | 通过向梯度或者权重添加噪声的方式简单实现MPC |
 
 ## 使用方法
 

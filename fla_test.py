@@ -1,15 +1,20 @@
+from dl.simple_cnn_classifier import SimpleCNNClassifier
+from dl.simple_logistic_regression import SimpleLogisticRegression
+import dl.metrics as Metrics
+
 from fl.client import Client
 from fl.server import Server
 from fl.controller import FLController, mode_avg_grad, mode_avg_weight, mode_avg_vote
 from fl.model_factory import ModelFactory
 from fl.model_factory import type_regression, type_binary_classification, type_multi_classification
+
 from fla.malicious_client import MaliciousClient
 from fla.malicious_client import attack_type_none, attack_sample_poison, attack_label_flip, attack_ood_data, attack_backdoor, attack_gradient_poison, attack_weight_poison
 from fla.defend.robust_aggr.robust_aggr_server import RobustAggrServer
 from fla.defend.robust_aggr.robust_aggr_controller import MedianAggrFLController, TrimmedMeanAggrFLController, KrumAggrFLController
-from dl.simple_cnn_classifier import SimpleCNNClassifier
-from dl.simple_logistic_regression import SimpleLogisticRegression
-import dl.metrics as Metrics
+from fla.defend.mpc.mpc_server import MPCServer
+from fla.defend.mpc.mpc_client import MPCClient
+from fla.defend.mpc.mpc_controller import MPCController
 
 import numpy as np
 import torch
@@ -201,7 +206,7 @@ class TestModelPoison(unittest.TestCase):
         print("Weight Poison accuracy: ", weight_poison_accuracy)
 
 
-class TestRobustAggr(unittest.TestCase):
+class TestFLA(unittest.TestCase):
 
     def _init_clients(self, n_clients, n_malicious_client, model_factory_json,
                       attack_type):
@@ -230,7 +235,7 @@ class TestRobustAggr(unittest.TestCase):
     def _init_server(self, model_factory_json):
         model, model_type, optimizer, criterion = ModelFactory().create_model(
             model_factory_json)
-        return RobustAggrServer(model, optimizer, criterion, model_type)
+        return Server(model, optimizer, criterion, model_type)
 
     def _model_json(self):
         return {
@@ -289,7 +294,7 @@ class TestRobustAggr(unittest.TestCase):
             }]
         }
 
-    def _prepare(self, compare, attack_type):
+    def _prepare(self, attack_type):
         transform = torchvision.transforms.Compose([
             torchvision.transforms.Resize((28, 28)),
             torchvision.transforms.ToTensor(),
@@ -314,17 +319,12 @@ class TestRobustAggr(unittest.TestCase):
 
         n_clients = 5
         n_malicious_client = 1  # assume poisoned client less than normal clients (1/3)
-        n_rounds = 10
+        n_rounds = 1
         n_iter = 1
 
         clients = self._init_clients(n_clients, n_malicious_client,
                                      self._model_json(), attack_type)
-        model, model_type, optimizer, criterion = ModelFactory().create_model(
-            self._model_json())
-        if compare:
-            server = Server(model, optimizer, criterion, model_type)
-        else:
-            server = RobustAggrServer(model, optimizer, criterion, model_type)
+        server = self._init_server(self._model_json())
 
         for i in range(n_clients):
             clients[i].setDataLoader(train_loader, n_iter)
@@ -332,20 +332,28 @@ class TestRobustAggr(unittest.TestCase):
 
         return server, clients, n_rounds
 
+
+class TestRobustAggr(TestFLA):
+
+    def _init_server(self, model_factory_json):
+        model, model_type, optimizer, criterion = ModelFactory().create_model(
+            model_factory_json)
+        return RobustAggrServer(model, optimizer, criterion, model_type)
+
     def normal_grad_compare(self):
-        server, clients, n_rounds = self._prepare(True, attack_sample_poison)
+        server, clients, n_rounds = self._prepare(attack_sample_poison)
         controller = FLController(server, clients)
         controller.train(n_rounds, mode_avg_grad)
         server.model_metric.summary()
 
     def test_median_grad_aggr(self):
-        server, clients, n_rounds = self._prepare(False, attack_sample_poison)
+        server, clients, n_rounds = self._prepare(attack_sample_poison)
         controller = MedianAggrFLController(server, clients)
         controller.train(n_rounds, mode_avg_grad)
         server.model_metric.summary()
 
     def test_trimmed_mean_grad_aggr(self):
-        server, clients, n_rounds = self._prepare(False, attack_sample_poison)
+        server, clients, n_rounds = self._prepare(attack_sample_poison)
         controller = TrimmedMeanAggrFLController(server,
                                                  clients,
                                                  trim_ratio=0.2)
@@ -353,19 +361,19 @@ class TestRobustAggr(unittest.TestCase):
         server.model_metric.summary()
 
     def normal_weight_compare(self):
-        server, clients, n_rounds = self._prepare(True, attack_weight_poison)
+        server, clients, n_rounds = self._prepare(attack_weight_poison)
         controller = FLController(server, clients)
         controller.train(n_rounds, mode_avg_weight)
         server.model_metric.summary()
 
     def test_median_weight_aggr(self):
-        server, clients, n_rounds = self._prepare(False, attack_weight_poison)
+        server, clients, n_rounds = self._prepare(attack_weight_poison)
         controller = MedianAggrFLController(server, clients)
         controller.train(n_rounds, mode_avg_weight)
         server.model_metric.summary()
 
     def test_trimmed_mean_weight_aggr(self):
-        server, clients, n_rounds = self._prepare(False, attack_weight_poison)
+        server, clients, n_rounds = self._prepare(attack_weight_poison)
         controller = TrimmedMeanAggrFLController(server,
                                                  clients,
                                                  trim_ratio=0.2)
@@ -373,7 +381,7 @@ class TestRobustAggr(unittest.TestCase):
         server.model_metric.summary()
 
     def normal_backdoor_attack(self):
-        server, clients, n_rounds = self._prepare(True, attack_backdoor)
+        server, clients, n_rounds = self._prepare(attack_backdoor)
         controller = FLController(server, clients)
         controller.train(n_rounds, mode_avg_weight)
         server.model_metric.summary()
@@ -383,9 +391,40 @@ class TestRobustAggr(unittest.TestCase):
         )
 
     def test_krum_weight_aggr(self):
-        server, clients, n_rounds = self._prepare(False, attack_backdoor)
+        server, clients, n_rounds = self._prepare(attack_backdoor)
         controller = KrumAggrFLController(
             server, clients,
             n_malicious=1)  # asume admin think there is 1 malicious client
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+
+class TestMPC(TestFLA):
+
+    def _init_clients(self, n_clients, n_malicious_client, model_factory_json,
+                      attack_type):
+        clients = []
+        for _ in range(n_clients):
+            model, model_type, optimizer, criterion = ModelFactory(
+            ).create_model(model_factory_json)
+            client = MPCClient(model, criterion, optimizer, type=model_type)
+            clients.append(client)
+        random.shuffle(clients)
+        return clients
+
+    def _init_server(self, model_factory_json):
+        model, model_type, optimizer, criterion = ModelFactory().create_model(
+            model_factory_json)
+        return MPCServer(model, optimizer, criterion, model_type, 5)
+
+    def test_mpc_grad_aggr(self):
+        server, clients, n_rounds = self._prepare(attack_type_none)
+        controller = MPCController(server, clients)
+        controller.train(n_rounds, mode_avg_grad)
+        server.model_metric.summary()
+
+    def test_mpc_weight_aggr(self):
+        server, clients, n_rounds = self._prepare(attack_type_none)
+        controller = MPCController(server, clients)
         controller.train(n_rounds, mode_avg_weight)
         server.model_metric.summary()
