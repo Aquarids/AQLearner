@@ -1,7 +1,9 @@
 import torch
 from tqdm import tqdm
 
+
 class RNN(torch.nn.Module):
+
     def __init__(self, input_size, hidden_size, output_size):
         super(RNN, self).__init__()
         self.hidden_size = hidden_size
@@ -23,10 +25,10 @@ class RNN(torch.nn.Module):
             x_t = x[:, t, :]
 
             h = torch.tanh(x_t @ self.W_xh + h @ self.W_hh + self.b_h)
-        
+
         y = self.fc(h)
         return y
-    
+
     def fit(self, loader, learning_rate=0.01, n_epochs=100):
         criterion = torch.nn.MSELoss()
         optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
@@ -49,12 +51,13 @@ class RNN(torch.nn.Module):
             for X, _ in loader:
                 predictions += self.forward(X).tolist()
         return predictions
-        
+
     def summary(self):
-        print("Model Detail: ", self)        
+        print("Model Detail: ", self)
         total_params = sum(p.numel() for p in self.parameters())
         print(f"Total Parameters: {total_params}")
         for name, param in self.named_parameters():
             if param.requires_grad:
-                print(f"Layer: {name}, Size: {param.size()}, Values: {param.data}")
-        
+                print(
+                    f"Layer: {name}, Size: {param.size()}, Values: {param.data}"
+                )

@@ -1,7 +1,9 @@
 import numpy as np
 import learn_math
 
+
 class GaussianNaiveBayesClassifier:
+
     def __init__(self):
         self.means = {}
         self.variances = {}
@@ -21,7 +23,10 @@ class GaussianNaiveBayesClassifier:
             posteriors = []
             for cls in self.classes:
                 prior = np.log(self.priors[cls])
-                conditional = np.sum(np.log(learn_math.gaussian_pdf(x, self.means[cls], self.variances[cls])))
+                conditional = np.sum(
+                    np.log(
+                        learn_math.gaussian_pdf(x, self.means[cls],
+                                                self.variances[cls])))
                 posterior = prior + conditional
                 posteriors.append(posterior)
             predictions.append(self.classes[np.argmax(posteriors)])

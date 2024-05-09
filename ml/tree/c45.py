@@ -1,7 +1,9 @@
 import numpy as np
 import learn_math
 
+
 class C45():
+
     def __init__(self, max_depth=5):
         self.max_depth = max_depth
         self.tree = None
@@ -19,7 +21,7 @@ class C45():
         right_idxs = X[:, best_feature] >= best_threshold
         if len(X[left_idxs]) == 0 or len(X[right_idxs]) == 0:
             return {'is_leaf': True, 'label': learn_math.most_common(y)}
-        
+
         left = self._build_tree(X[left_idxs], y[left_idxs])
         right = self._build_tree(X[right_idxs], y[right_idxs])
         tree = {
@@ -44,7 +46,7 @@ class C45():
                     best_feature = feature
                     best_threshold = threshold
         return best_feature, best_threshold
-    
+
     def _information_gain(self, X, y, feature, threshold):
         left_idxs = X[:, feature] < threshold
         right_idxs = X[:, feature] >= threshold
@@ -56,7 +58,8 @@ class C45():
         left_entropy = learn_math.caculate_entropy(y[left_idxs])
         right_entropy = learn_math.caculate_entropy(y[right_idxs])
 
-        return total_entropy - (n_left / n) * left_entropy - (n_right / n) * right_entropy
+        return total_entropy - (n_left / n) * left_entropy - (
+            n_right / n) * right_entropy
 
     def _intrinsic_value(self, X, y, feature, threshold):
         left_idxs = X[:, feature] < threshold
@@ -70,15 +73,14 @@ class C45():
 
         return (n_left / n) * left_entropy + (n_right / n) * right_entropy
 
-    
     def _information_gain_ratio(self, X, y, feature, threshold):
-    
+
         information_gain = self._information_gain(X, y, feature, threshold)
         intrinsic_value = self._intrinsic_value(X, y, feature, threshold)
 
         if intrinsic_value == 0:
             return 0
-        
+
         return information_gain / intrinsic_value
 
     def predict(self, X):
@@ -98,6 +100,6 @@ class C45():
 
     def accuracy_score(self, y_test, y_pred):
         return np.sum(y_test == y_pred) / len(y_test)
-    
+
     def get_tree(self):
         return self.tree

@@ -3,16 +3,27 @@ from tqdm import tqdm
 
 
 class Residual(torch.nn.Module):
-    def __init__(self, input_channels, num_channels,
-                 use_1x1conv=False, strides=1):
+
+    def __init__(self,
+                 input_channels,
+                 num_channels,
+                 use_1x1conv=False,
+                 strides=1):
         super().__init__()
-        self.conv1 = torch.nn.Conv2d(input_channels, num_channels,
-                               kernel_size=3, padding=1, stride=strides)
-        self.conv2 = torch.nn.Conv2d(num_channels, num_channels,
-                               kernel_size=3, padding=1)
+        self.conv1 = torch.nn.Conv2d(input_channels,
+                                     num_channels,
+                                     kernel_size=3,
+                                     padding=1,
+                                     stride=strides)
+        self.conv2 = torch.nn.Conv2d(num_channels,
+                                     num_channels,
+                                     kernel_size=3,
+                                     padding=1)
         if use_1x1conv:
-            self.conv3 = torch.nn.Conv2d(input_channels, num_channels,
-                                   kernel_size=1, stride=strides)
+            self.conv3 = torch.nn.Conv2d(input_channels,
+                                         num_channels,
+                                         kernel_size=1,
+                                         stride=strides)
         else:
             self.conv3 = None
         self.bn1 = torch.nn.BatchNorm2d(num_channels)
@@ -26,24 +37,39 @@ class Residual(torch.nn.Module):
         Y += X
         return torch.nn.functional.relu(Y)
 
+
 class ResNet(torch.nn.Module):
+
     def __init__(self, in_channels, num_classes):
         super(ResNet, self).__init__()
-        self.b1 = torch.nn.Sequential(torch.nn.Conv2d(in_channels, 32, kernel_size=3, stride=1, padding=1),
-                   torch.nn.BatchNorm2d(32), torch.nn.ReLU(),
-                   torch.nn.MaxPool2d(kernel_size=2, stride=2))
-        self.b2 = torch.nn.Sequential(*self.resnet_block(32, 32, 2, first_block=True))
+        self.b1 = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channels,
+                            32,
+                            kernel_size=3,
+                            stride=1,
+                            padding=1), torch.nn.BatchNorm2d(32),
+            torch.nn.ReLU(), torch.nn.MaxPool2d(kernel_size=2, stride=2))
+        self.b2 = torch.nn.Sequential(
+            *self.resnet_block(32, 32, 2, first_block=True))
         self.b3 = torch.nn.Sequential(*self.resnet_block(32, 64, 2))
 
         self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = torch.nn.Sequential(torch.nn.Flatten(), torch.nn.Linear(64, num_classes))
+        self.fc = torch.nn.Sequential(torch.nn.Flatten(),
+                                      torch.nn.Linear(64, num_classes))
 
-    def resnet_block(self, input_channels, num_channels, num_residuals, first_block=False):
+    def resnet_block(self,
+                     input_channels,
+                     num_channels,
+                     num_residuals,
+                     first_block=False):
         blk = []
         for i in range(num_residuals):
             if i == 0 and not first_block:
-                blk.append(Residual(input_channels, num_channels,
-                                    use_1x1conv=True, strides=2))
+                blk.append(
+                    Residual(input_channels,
+                             num_channels,
+                             use_1x1conv=True,
+                             strides=2))
             else:
                 blk.append(Residual(num_channels, num_channels))
         return blk
@@ -56,7 +82,7 @@ class ResNet(torch.nn.Module):
         x = torch.flatten(x, 1)
         y = self.fc(x)
         return y
-    
+
     def fit(self, loader, learning_rate=0.01, n_iters=1000):
         criterion = torch.nn.CrossEntropyLoss()
         optimizer = torch.optim.SGD(self.parameters(), lr=learning_rate)
@@ -82,12 +108,13 @@ class ResNet(torch.nn.Module):
                 possibilities += possiblity.tolist()
                 predictions += torch.argmax(possiblity, dim=1).tolist()
             return predictions, possibilities
-        
+
     def summary(self):
-        print("Model Detail: ", self)        
+        print("Model Detail: ", self)
         total_params = sum(p.numel() for p in self.parameters())
         print(f"Total Parameters: {total_params}")
         for name, param in self.named_parameters():
             if param.requires_grad:
-                print(f"Layer: {name}, Size: {param.size()}, Values: {param.data}")
-        
+                print(
+                    f"Layer: {name}, Size: {param.size()}, Values: {param.data}"
+                )

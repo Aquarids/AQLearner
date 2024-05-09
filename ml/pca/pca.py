@@ -1,6 +1,8 @@
 import numpy as np
 
+
 class EVD:
+
     def __init__(self, n_components):
         self.n_components = n_components
         self.components = None
@@ -23,7 +25,9 @@ class EVD:
         X_centered = X - self.mean
         return np.dot(X_centered, self.components)
 
+
 class SVD:
+
     def __init__(self, n_components):
         self.n_components = n_components
         self.components = None

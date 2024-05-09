@@ -1,7 +1,9 @@
 import numpy as np
 import learn_math
 
+
 class LinearRegression:
+
     def __init__(self) -> None:
         self.w = None
         self.b = None
@@ -14,7 +16,6 @@ class LinearRegression:
 
     def predict(self, X):
         return X @ self.w + self.b
-    
+
     def r_squared_score(self, y_test, y_pred):
         return learn_math.r_squared(y_test, y_pred)
-    

@@ -1,4 +1,5 @@
 class SimplePSI:
+
     def __init__(self):
         self.dic = []
         pass
@@ -13,5 +14,5 @@ class SimplePSI:
         for key_hashed in hashed_data:
             for key in self.dic:
                 if key_hashed == hash(key):
-                   common_keys.append(key)
+                    common_keys.append(key)
         return common_keys

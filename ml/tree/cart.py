@@ -1,7 +1,9 @@
 import numpy as np
 import learn_math
 
+
 class CART():
+
     def __init__(self, max_depth=5):
         self.max_depth = max_depth
         self.tree = None
@@ -12,11 +14,8 @@ class CART():
     def _build_tree(self, X, y, depth):
 
         if len(np.unique(y)) == 1 or depth >= self.max_depth:
-            return {
-                'is_leaf': True,
-                'label': learn_math.most_common(y)
-            }
-        
+            return {'is_leaf': True, 'label': learn_math.most_common(y)}
+
         best_feature, best_threshold = self._best_criteria(X, y)
         left_idxs, right_idxs = self._split(X[:, best_feature], best_threshold)
         left = self._build_tree(X[left_idxs], y[left_idxs], depth + 1)
@@ -53,7 +52,8 @@ class CART():
             return 0
         left_impurity = learn_math.gini(y[left_idxs])
         right_impurity = learn_math.gini(y[right_idxs])
-        weighted_impurity = (n_left / n) * left_impurity + (n_right / n) * right_impurity
+        weighted_impurity = (n_left / n) * left_impurity + (n_right /
+                                                            n) * right_impurity
         gain = parent_impurity - weighted_impurity
         return gain
 
@@ -63,7 +63,9 @@ class CART():
         return left_idxs, right_idxs
 
     def predict(self, X):
-        predicted_labels = [self._predict_single_input(x, self.tree) for x in X]
+        predicted_labels = [
+            self._predict_single_input(x, self.tree) for x in X
+        ]
         return np.array(predicted_labels)
 
     def _predict_single_input(self, x, tree):
@@ -75,9 +77,9 @@ class CART():
             return self._predict_single_input(x, tree['left'])
         else:
             return self._predict_single_input(x, tree['right'])
-        
+
     def accuracy_score(self, y_test, y_pred):
         return np.sum(y_test == y_pred) / len(y_test)
-    
+
     def get_tree(self):
         return self.tree

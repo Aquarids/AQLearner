@@ -1,18 +1,23 @@
 import torch
 from tqdm import tqdm
 
+
 class GRU(torch.nn.Module):
+
     def __init__(self, input_size, hidden_size, output_size):
         super(GRU, self).__init__()
         self.hidden_size = hidden_size
 
-        self.W_r = torch.nn.Parameter(torch.randn(input_size + hidden_size, hidden_size))
+        self.W_r = torch.nn.Parameter(
+            torch.randn(input_size + hidden_size, hidden_size))
         self.b_r = torch.nn.Parameter(torch.zeros(hidden_size))
 
-        self.W_z = torch.nn.Parameter(torch.randn(input_size + hidden_size, hidden_size))
+        self.W_z = torch.nn.Parameter(
+            torch.randn(input_size + hidden_size, hidden_size))
         self.b_z = torch.nn.Parameter(torch.zeros(hidden_size))
 
-        self.W_h = torch.nn.Parameter(torch.randn(input_size + hidden_size, hidden_size))
+        self.W_h = torch.nn.Parameter(
+            torch.randn(input_size + hidden_size, hidden_size))
         self.b_h = torch.nn.Parameter(torch.zeros(hidden_size))
 
         self.fc = torch.nn.Linear(hidden_size, output_size)
@@ -30,10 +35,10 @@ class GRU(torch.nn.Module):
             h_tilde = torch.tanh(combined @ self.W_h + self.b_h)
 
             h = (1 - z) * h + z * h_tilde
-        
+
         y = self.fc(h)
         return y
-    
+
     def fit(self, loader, learning_rate=0.01, n_epochs=100):
         criterion = torch.nn.MSELoss()
         optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
@@ -58,9 +63,11 @@ class GRU(torch.nn.Module):
         return predictions
 
     def summary(self):
-        print("Model Detail: ", self)        
+        print("Model Detail: ", self)
         total_params = sum(p.numel() for p in self.parameters())
         print(f"Total Parameters: {total_params}")
         for name, param in self.named_parameters():
             if param.requires_grad:
-                print(f"Layer: {name}, Size: {param.size()}, Values: {param.data}")
+                print(
+                    f"Layer: {name}, Size: {param.size()}, Values: {param.data}"
+                )

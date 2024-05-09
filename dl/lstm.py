@@ -1,28 +1,35 @@
 import torch
 from tqdm import tqdm
 
+
 class LSTM(torch.nn.Module):
+
     def __init__(self, input_size, hidden_size, output_size):
         super(LSTM, self).__init__()
         self.hidden_size = hidden_size
 
-        self.W_f = torch.nn.Parameter(torch.randn(input_size + hidden_size, hidden_size))
+        self.W_f = torch.nn.Parameter(
+            torch.randn(input_size + hidden_size, hidden_size))
         self.b_f = torch.nn.Parameter(torch.zeros(hidden_size))
 
-        self.W_i = torch.nn.Parameter(torch.randn(input_size + hidden_size, hidden_size))
+        self.W_i = torch.nn.Parameter(
+            torch.randn(input_size + hidden_size, hidden_size))
         self.b_i = torch.nn.Parameter(torch.zeros(hidden_size))
 
-        self.W_c = torch.nn.Parameter(torch.randn(input_size + hidden_size, hidden_size))
+        self.W_c = torch.nn.Parameter(
+            torch.randn(input_size + hidden_size, hidden_size))
         self.b_c = torch.nn.Parameter(torch.zeros(hidden_size))
 
-        self.W_o = torch.nn.Parameter(torch.randn(input_size + hidden_size, hidden_size))
+        self.W_o = torch.nn.Parameter(
+            torch.randn(input_size + hidden_size, hidden_size))
         self.b_o = torch.nn.Parameter(torch.zeros(hidden_size))
 
         self.fc = torch.nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
         batch_size, seq_len, _ = x.size()
-        h, c = torch.zeros(batch_size, self.hidden_size), torch.zeros(batch_size, self.hidden_size)
+        h, c = torch.zeros(batch_size, self.hidden_size), torch.zeros(
+            batch_size, self.hidden_size)
 
         for t in range(seq_len):
             x_t = x[:, t, :]
@@ -35,7 +42,7 @@ class LSTM(torch.nn.Module):
 
             c = f * c + i * c_tilde
             h = o * torch.tanh(c)
-        
+
         y = self.fc(h)
         return y
 
@@ -61,11 +68,13 @@ class LSTM(torch.nn.Module):
             for X, _ in loader:
                 predictions += self.forward(X).tolist()
         return predictions
-    
+
     def summary(self):
-        print("Model Detail: ", self)        
+        print("Model Detail: ", self)
         total_params = sum(p.numel() for p in self.parameters())
         print(f"Total Parameters: {total_params}")
         for name, param in self.named_parameters():
             if param.requires_grad:
-                print(f"Layer: {name}, Size: {param.size()}, Values: {param.data}")
+                print(
+                    f"Layer: {name}, Size: {param.size()}, Values: {param.data}"
+                )

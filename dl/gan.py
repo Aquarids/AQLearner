@@ -1,39 +1,41 @@
 import torch
 from tqdm import tqdm
 
+
 class Generator(torch.nn.Module):
+
     def __init__(self, input_dim, output_dim):
         super(Generator, self).__init__()
-        self.net = torch.nn.Sequential(
-            torch.nn.Linear(input_dim, 128),
-            torch.nn.LeakyReLU(0.2),
-            torch.nn.Linear(128, 256),
-            torch.nn.LeakyReLU(0.2),
-            torch.nn.Linear(256, 512),
-            torch.nn.LeakyReLU(0.2),
-            torch.nn.Linear(512, output_dim),
-            torch.nn.Tanh()
-        )
+        self.net = torch.nn.Sequential(torch.nn.Linear(input_dim, 128),
+                                       torch.nn.LeakyReLU(0.2),
+                                       torch.nn.Linear(128, 256),
+                                       torch.nn.LeakyReLU(0.2),
+                                       torch.nn.Linear(256, 512),
+                                       torch.nn.LeakyReLU(0.2),
+                                       torch.nn.Linear(512, output_dim),
+                                       torch.nn.Tanh())
 
     def forward(self, x):
         return self.net(x)
+
 
 class Discriminator(torch.nn.Module):
+
     def __init__(self, input_dim):
         super(Discriminator, self).__init__()
-        self.net = torch.nn.Sequential(
-            torch.nn.Linear(input_dim, 512),
-            torch.nn.LeakyReLU(0.2),
-            torch.nn.Linear(512, 256),
-            torch.nn.LeakyReLU(0.2),
-            torch.nn.Linear(256, 1),
-            torch.nn.Sigmoid()
-        )
+        self.net = torch.nn.Sequential(torch.nn.Linear(input_dim, 512),
+                                       torch.nn.LeakyReLU(0.2),
+                                       torch.nn.Linear(512, 256),
+                                       torch.nn.LeakyReLU(0.2),
+                                       torch.nn.Linear(256, 1),
+                                       torch.nn.Sigmoid())
 
     def forward(self, x):
         return self.net(x)
-    
+
+
 class GAN:
+
     def __init__(self, input_dim, output_dim):
         self.generator = Generator(input_dim, output_dim)
         self.discriminator = Discriminator(output_dim)
@@ -54,7 +56,7 @@ class GAN:
                 # Real data label is 1, fake data label is 0
                 real_label = torch.ones(batch_size, 1)
                 fake_label = torch.zeros(batch_size, 1)
-                
+
                 # Train Discriminator
                 self.discriminator.zero_grad()
                 output_real = self.discriminator(real_data)
@@ -70,7 +72,7 @@ class GAN:
                 loss_d = (loss_real + loss_fake) / 2
                 loss_d.backward()
                 optimizer_D.step()
-                
+
                 # Train Generator
                 self.generator.zero_grad()
                 output_fake = self.discriminator(fake_data)
@@ -79,5 +81,6 @@ class GAN:
                 optimizer_G.step()
 
                 progress_bar.update(1)
-                progress_bar.set_description(f'Loss D: {loss_d.item()}, Loss G: {loss_g.item()}')
+                progress_bar.set_description(
+                    f'Loss D: {loss_d.item()}, Loss G: {loss_g.item()}')
         progress_bar.close()

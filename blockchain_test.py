@@ -8,8 +8,11 @@ from blockchain.net import Net
 
 import unittest
 
+
 class TestBlockchain(unittest.TestCase):
-    def _transaction(self, sender: Wallet, recipient: Wallet, amount, utxo: UTXOSet, sender_node):
+
+    def _transaction(self, sender: Wallet, recipient: Wallet, amount,
+                     utxo: UTXOSet, sender_node):
         inputs = []
         outputs = [(recipient.get_address(), amount)]
         utxos = utxo.find_utxos(sender.get_address())
@@ -22,7 +25,7 @@ class TestBlockchain(unittest.TestCase):
             cur_amt += amt
         if cur_amt < amount:
             raise Exception("Not enough funds")
-        
+
         change = cur_amt - amount
         if change > 0:
             outputs.append((sender.get_address(), change))
@@ -33,7 +36,8 @@ class TestBlockchain(unittest.TestCase):
         self.full_node_1.blockchain.add_transaction(tx)
         self.net.broadcast_transaction(tx, sender_node)
 
-        block = self.full_node_1.blockchain.mine_transactions(sender.get_address())
+        block = self.full_node_1.blockchain.mine_transactions(
+            sender.get_address())
         if block:
             print(f"Block {block.index} mined")
             self.net.broadcast_block(block, self.full_node_1)
@@ -45,7 +49,8 @@ class TestBlockchain(unittest.TestCase):
         self.full_node_1 = FullNode(Blockchain(4))
         # genesis block is fixed here, thus no difference
         self.full_node_2 = FullNode(Blockchain(4))
-        assert self.full_node_1.blockchain.chain[0].hash == self.full_node_2.blockchain.chain[0].hash
+        assert self.full_node_1.blockchain.chain[
+            0].hash == self.full_node_2.blockchain.chain[0].hash
 
         self.light_node_1 = LightNode()
         self.light_node_2 = LightNode()
@@ -61,12 +66,17 @@ class TestBlockchain(unittest.TestCase):
         wallet_b = self.full_node_1.blockchain.create_wallet()
         print(f"Wallet A address: {wallet_a.get_address()}")
         print(f"Wallet B address: {wallet_b.get_address()}")
-        
-        self.full_node_1.blockchain.mine_coinbase(wallet_a.get_address())
-        print(f"Wallet A balance: {wallet_a.get_balance(self.full_node_1.blockchain.utxo_set)}")
-        print(f"Wallet B balance: {wallet_b.get_balance(self.full_node_1.blockchain.utxo_set)}")
 
-        self.net.broadcast_block(self.full_node_1.blockchain.get_latest_block(), self.full_node_1)
+        self.full_node_1.blockchain.mine_coinbase(wallet_a.get_address())
+        print(
+            f"Wallet A balance: {wallet_a.get_balance(self.full_node_1.blockchain.utxo_set)}"
+        )
+        print(
+            f"Wallet B balance: {wallet_b.get_balance(self.full_node_1.blockchain.utxo_set)}"
+        )
+
+        self.net.broadcast_block(
+            self.full_node_1.blockchain.get_latest_block(), self.full_node_1)
 
         # assuming transactions between wallet A and wallet B
         utxo = self.full_node_1.blockchain.utxo_set
@@ -90,5 +100,3 @@ class TestBlockchain(unittest.TestCase):
         print(f"Round 6 Wallet B balance: {wallet_b.get_balance(utxo)}")
         print(f"Node 1 Block count: {len(self.full_node_1.blockchain.chain)}")
         print(f"Node 2 Block count: {len(self.full_node_2.blockchain.chain)}")
-
-        

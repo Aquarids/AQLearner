@@ -2,11 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+
 def accuracy(y_test, y_pred):
     return np.sum(y_test == y_pred) / len(y_test)
 
+
 def mse(y_true, y_pred):
-    return np.mean((y_true - y_pred) ** 2)
+    return np.mean((y_true - y_pred)**2)
+
 
 def precision_recall_f1(y_true, y_pred):
     eps = 1e-7
@@ -18,6 +21,7 @@ def precision_recall_f1(y_true, y_pred):
     f1 = 2 * (precision * recall) / (precision + recall + eps)
     return precision, recall, f1
 
+
 def tpr_fpr(y_true, y_pred):
     eps = 1e-7
     true_positive = np.sum((y_pred == 1) & (y_true == 1))
@@ -27,6 +31,7 @@ def tpr_fpr(y_true, y_pred):
     tpr = true_positive / (true_positive + false_negative + eps)
     fpr = false_positive / (false_positive + true_negative + eps)
     return tpr, fpr
+
 
 def auc(y_true, y_prob):
     thresholds = np.sort(np.unique(y_prob))[::-1]
@@ -40,6 +45,7 @@ def auc(y_true, y_prob):
         tpr_prev = tpr
         fpr_prev = fpr
     return auc
+
 
 def plot_roc_curve(y_true, y_prob, show=True):
     thresholds = np.sort(np.unique(y_prob))[::-1]
@@ -57,6 +63,7 @@ def plot_roc_curve(y_true, y_prob, show=True):
     if show:
         plt.show()
     return plt
+
 
 def save_roc_curve(y_true, y_prob, filename, dir):
     plt = plot_roc_curve(y_true, y_prob, show=False)

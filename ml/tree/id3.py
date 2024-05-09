@@ -1,7 +1,9 @@
 import numpy as np
 import learn_math
 
+
 class ID3():
+
     def __init__(self):
         self.tree = None
 
@@ -42,7 +44,7 @@ class ID3():
                     best_feature = feature
                     best_threshold = threshold
         return best_feature, best_threshold
-                
+
     def _information_gain(self, X, y, feature, threshold):
         left_idxs = X[:, feature] < threshold
         right_idxs = X[:, feature] >= threshold
@@ -54,10 +56,13 @@ class ID3():
         left_entropy = learn_math.caculate_entropy(y[left_idxs])
         right_entropy = learn_math.caculate_entropy(y[right_idxs])
 
-        return total_entropy - (n_left / n) * left_entropy - (n_right / n) * right_entropy
+        return total_entropy - (n_left / n) * left_entropy - (
+            n_right / n) * right_entropy
 
     def predict(self, X):
-        predicted_labels = [self._predict_single_input(x, self.tree) for x in X]
+        predicted_labels = [
+            self._predict_single_input(x, self.tree) for x in X
+        ]
         return np.array(predicted_labels)
 
     def _predict_single_input(self, x, tree):
@@ -72,6 +77,6 @@ class ID3():
 
     def accuracy_score(self, y_test, y_pred):
         return np.sum(y_test == y_pred) / len(y_test)
-    
+
     def get_tree(self):
         return self.tree
