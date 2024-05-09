@@ -1,10 +1,13 @@
 import numpy as np
 import learn_math
 
+
 class DBScan:
-    def __init__(self, eps=0.5, min_samples=5):
+
+    def __init__(self, eps=0.5, min_samples=5, noise_label=-1):
         self.eps = eps
         self.min_samples = min_samples
+        self.noise_label = noise_label
         self.labels = None
         self.visited = None
         self.X = None
@@ -20,7 +23,7 @@ class DBScan:
             self.visited[i] = True
             neighbors = self._get_neighbors(i)
             if len(neighbors) < self.min_samples:
-                self.labels[i] = 0
+                self.labels[i] = self.noise_label
             else:
                 cluster += 1
                 self._expand_cluster(i, neighbors, cluster)
@@ -45,3 +48,6 @@ class DBScan:
 
     def get_labels(self):
         return self.labels
+
+    def get_noise_index(self):
+        return np.where(self.labels == self.noise_label)[0]

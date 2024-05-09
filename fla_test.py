@@ -12,6 +12,7 @@ from fla.malicious_client import MaliciousClient
 from fla.malicious_client import attack_type_none, attack_sample_poison, attack_label_flip, attack_ood_data, attack_backdoor, attack_gradient_poison, attack_weight_poison
 from fla.defend.robust_aggr.robust_aggr_server import RobustAggrServer
 from fla.defend.robust_aggr.robust_aggr_controller import MedianAggrFLController, TrimmedMeanAggrFLController, KrumAggrFLController
+from fla.defend.detection.anomaly_detection_server import AnomalyDetectionServer
 from fla.defend.mpc.mpc_server import MPCServer
 from fla.defend.mpc.mpc_client import MPCClient
 from fla.defend.mpc.mpc_controller import MPCController
@@ -317,9 +318,9 @@ class TestFLA(unittest.TestCase):
                                                   batch_size=32,
                                                   shuffle=False)
 
-        n_clients = 5
-        n_malicious_client = 1  # assume poisoned client less than normal clients (1/3)
-        n_rounds = 1
+        n_clients = 10
+        n_malicious_client = 2  # assume poisoned client less than normal clients (1/3)
+        n_rounds = 10
         n_iter = 1
 
         clients = self._init_clients(n_clients, n_malicious_client,
@@ -394,7 +395,32 @@ class TestRobustAggr(TestFLA):
         server, clients, n_rounds = self._prepare(attack_backdoor)
         controller = KrumAggrFLController(
             server, clients,
-            n_malicious=1)  # asume admin think there is 1 malicious client
+            n_malicious=2)  # asume admin think there is 2 malicious client
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+
+class TestAnomalyDetection(TestFLA):
+
+    def _init_server(self, model_factory_json):
+        model, model_type, optimizer, criterion = ModelFactory().create_model(
+            model_factory_json)
+        return AnomalyDetectionServer(model,
+                                      optimizer,
+                                      criterion,
+                                      model_type,
+                                      eps=0.5,
+                                      min_samples=2)
+
+    def test_gradient_anomaly_detection(self):
+        server, clients, n_rounds = self._prepare(attack_gradient_poison)
+        controller = FLController(server, clients)
+        controller.train(n_rounds, mode_avg_grad)
+        server.model_metric.summary()
+
+    def test_weight_anomaly_detection(self):
+        server, clients, n_rounds = self._prepare(attack_weight_poison)
+        controller = FLController(server, clients)
         controller.train(n_rounds, mode_avg_weight)
         server.model_metric.summary()
 

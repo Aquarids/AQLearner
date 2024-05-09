@@ -20,13 +20,15 @@ import sklearn.datasets as datasets
 import sklearn.model_selection
 import matplotlib.pyplot as plt
 
+
 class TestLinear(unittest.TestCase):
+
     def test_linear_regression(self):
         X, y = datasets.make_regression(n_samples=20, n_features=1, noise=0.1)
 
         train_X, train_y = X[:18], y[:18]
         test_X, test_y = X[18:], y[18:]
-        
+
         model = LinearRegression()
         model.fit(train_X, train_y)
 
@@ -34,19 +36,27 @@ class TestLinear(unittest.TestCase):
         print('R-squared:', model.r_squared_score(test_y, y_pred))
 
     def test_logistic_regression(self):
-        X, y = datasets.make_classification(n_samples=20, n_features=2, n_redundant=0, n_clusters_per_class=1, random_state=42)
+        X, y = datasets.make_classification(n_samples=20,
+                                            n_features=2,
+                                            n_redundant=0,
+                                            n_clusters_per_class=1,
+                                            random_state=42)
 
         train_X, train_y = X[:18], y[:18]
         test_X, test_y = X[18:], y[18:]
-        
+
         model = LogisticRegression()
         model.fit(train_X, train_y)
 
         y_pred = model.predict(test_X)
-        print('Logistic Regression Accuracy:', model.accuracy_score(test_y, y_pred))
+        print('Logistic Regression Accuracy:',
+              model.accuracy_score(test_y, y_pred))
 
     def test_knn(self):
-        X, y = datasets.make_classification(n_samples=100, n_features=5, n_redundant=0, n_clusters_per_class=1)
+        X, y = datasets.make_classification(n_samples=100,
+                                            n_features=5,
+                                            n_redundant=0,
+                                            n_clusters_per_class=1)
 
         train_X, train_y = X[:18], y[:18]
         test_X, test_y = X[18:], y[18:]
@@ -57,10 +67,15 @@ class TestLinear(unittest.TestCase):
         y_pred = model.predict(test_X)
         print('KNN Accuracy:', model.accuracy_score(test_y, y_pred))
 
+
 class TestCluster(unittest.TestCase):
+
     def test_kmeans(self):
-        X, _ = datasets.make_blobs(n_samples=10, centers=3, cluster_std=0.60, random_state=0)
-    
+        X, _ = datasets.make_blobs(n_samples=10,
+                                   centers=3,
+                                   cluster_std=0.60,
+                                   random_state=0)
+
         model = KMeans(n_clusters=3)
         model.fit(X)
         labels = model.get_labels()
@@ -68,7 +83,11 @@ class TestCluster(unittest.TestCase):
         plt.title('KMeans Clustering')
         plt.scatter(X[:, 0], X[:, 1], c=labels, s=50, cmap='viridis')
         centroids = model.centroids
-        plt.scatter(centroids[:, 0], centroids[:, 1], c='red', s=200, alpha=0.5)
+        plt.scatter(centroids[:, 0],
+                    centroids[:, 1],
+                    c='red',
+                    s=200,
+                    alpha=0.5)
         plt.show()
 
     def test_dbscan(self):
@@ -79,27 +98,36 @@ class TestCluster(unittest.TestCase):
         model = DBScan(eps=eps, min_samples=min_samples)
         model.fit(X)
         labels = model.get_labels()
+        print('DBSCAN Labels:', labels)
 
         plt.figure(figsize=(10, 6))
         unique_labels = set(labels)
         for label in unique_labels:
-            if label == -2:  # Noise points
+            if label == -1:  # Noise points
                 color = 'k'
             else:
                 color = plt.cm.Spectral(float(label) / len(unique_labels))
             class_member_mask = (labels == label)
             xy = X[class_member_mask]
-            plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=color, markeredgecolor='k', markersize=14 if label == -2 else 6)
+            plt.plot(xy[:, 0],
+                     xy[:, 1],
+                     'o',
+                     markerfacecolor=color,
+                     markeredgecolor='k',
+                     markersize=14 if label == -2 else 6)
 
         plt.title('DBSCAN Clustering')
         plt.xlabel('Feature 1')
         plt.ylabel('Feature 2')
         plt.show()
 
+
 class TestTree(unittest.TestCase):
+
     def test_id3(self):
         X, y = datasets.load_iris(return_X_y=True)
-        train_X, test_X, train_y, test_y = sklearn.model_selection.train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+        train_X, test_X, train_y, test_y = sklearn.model_selection.train_test_split(
+            X, y, test_size=0.2, random_state=42, stratify=y)
 
         model = ID3()
         model.fit(train_X, train_y)
@@ -110,7 +138,8 @@ class TestTree(unittest.TestCase):
 
     def test_c45(self):
         X, y = datasets.load_iris(return_X_y=True)
-        train_X, test_X, train_y, test_y = sklearn.model_selection.train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+        train_X, test_X, train_y, test_y = sklearn.model_selection.train_test_split(
+            X, y, test_size=0.2, random_state=42, stratify=y)
 
         model = C45()
         model.fit(train_X, train_y)
@@ -121,7 +150,8 @@ class TestTree(unittest.TestCase):
 
     def test_cart(self):
         X, y = datasets.load_iris(return_X_y=True)
-        train_X, test_X, train_y, test_y = sklearn.model_selection.train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+        train_X, test_X, train_y, test_y = sklearn.model_selection.train_test_split(
+            X, y, test_size=0.2, random_state=42, stratify=y)
 
         model = CART()
         model.fit(train_X, train_y)
@@ -130,7 +160,9 @@ class TestTree(unittest.TestCase):
         print('CART Tree:', model.get_tree())
         print('CART Accuracy:', model.accuracy_score(test_y, y_pred))
 
+
 class TestSVM(unittest.TestCase):
+
     def plot_svm_decision_boundary(self, w, b, X, y):
         # Generate x values (x-axis) from the feature space
         x_values = np.linspace(min(X[:, 0]), max(X[:, 0]), 200)
@@ -139,10 +171,20 @@ class TestSVM(unittest.TestCase):
         y_values = -(w[0] / w[1]) * x_values - b / w[1]
 
         # Plot the decision boundary
-        plt.plot(x_values, y_values, "k", linewidth=2, label="Decision Boundary")
+        plt.plot(x_values,
+                 y_values,
+                 "k",
+                 linewidth=2,
+                 label="Decision Boundary")
 
         # Plot the dataset
-        plt.scatter(X[:, 0], X[:, 1], c=y, cmap='autumn', s=20, edgecolors='k', label="Data points")
+        plt.scatter(X[:, 0],
+                    X[:, 1],
+                    c=y,
+                    cmap='autumn',
+                    s=20,
+                    edgecolors='k',
+                    label="Data points")
 
         plt.xlabel("Feature 1")
         plt.ylabel("Feature 2")
@@ -151,10 +193,15 @@ class TestSVM(unittest.TestCase):
         plt.show()
 
     def test_linear_svm(self):
-        X, y = datasets.make_blobs(n_samples=100, n_features=2, centers=2, cluster_std=1.05, random_state=40)
+        X, y = datasets.make_blobs(n_samples=100,
+                                   n_features=2,
+                                   centers=2,
+                                   cluster_std=1.05,
+                                   random_state=40)
         y = np.where(y == 0, -1, 1)
 
-        train_X, test_X, train_y, test_y = sklearn.model_selection.train_test_split(X, y, test_size=0.2, random_state=42)
+        train_X, test_X, train_y, test_y = sklearn.model_selection.train_test_split(
+            X, y, test_size=0.2, random_state=42)
 
         model = LinearSVM()
         model.fit(train_X, train_y)
@@ -164,9 +211,14 @@ class TestSVM(unittest.TestCase):
         print('SVM Accuracy:', model.accuracy_score(test_y, y_pred))
         plt.show()
 
+
 class TestNaiveBayes(unittest.TestCase):
+
     def test_naive_bayes(self):
-        X, y = datasets.make_classification(n_samples=100, n_features=5, n_redundant=0, n_clusters_per_class=1)
+        X, y = datasets.make_classification(n_samples=100,
+                                            n_features=5,
+                                            n_redundant=0,
+                                            n_clusters_per_class=1)
 
         train_X, train_y = X[:90], y[:90]
         test_X, test_y = X[90:], y[90:]
@@ -178,7 +230,10 @@ class TestNaiveBayes(unittest.TestCase):
         print('Naive Bayes Accuracy:', model.accuracy_score(test_y, y_pred))
 
     def test_gaussian_naive_bayes(self):
-        X, y = datasets.make_classification(n_samples=100, n_features=5, n_redundant=0, n_clusters_per_class=1)
+        X, y = datasets.make_classification(n_samples=100,
+                                            n_features=5,
+                                            n_redundant=0,
+                                            n_clusters_per_class=1)
 
         train_X, train_y = X[:90], y[:90]
         test_X, test_y = X[90:], y[90:]
@@ -187,11 +242,17 @@ class TestNaiveBayes(unittest.TestCase):
         model.fit(train_X, train_y)
 
         y_pred = model.predict(test_X)
-        print('Gaussian Naive Bayes Accuracy:', model.accuracy_score(test_y, y_pred))
+        print('Gaussian Naive Bayes Accuracy:',
+              model.accuracy_score(test_y, y_pred))
+
 
 class TestEnsmbleLearning(unittest.TestCase):
+
     def test_adaboost(self):
-        X, y = datasets.make_classification(n_samples=100, n_features=5, n_redundant=0, n_clusters_per_class=1)
+        X, y = datasets.make_classification(n_samples=100,
+                                            n_features=5,
+                                            n_redundant=0,
+                                            n_clusters_per_class=1)
         train_X, train_y = X[:90], y[:90]
         test_X, test_y = X[90:], y[90:]
 
@@ -202,7 +263,10 @@ class TestEnsmbleLearning(unittest.TestCase):
         print('AdaBoost Accuracy:', model.accuracy_score(test_y, y_pred))
 
     def test_random_forest(self):
-        X, y = datasets.make_classification(n_samples=100, n_features=5, n_redundant=0, n_clusters_per_class=1)
+        X, y = datasets.make_classification(n_samples=100,
+                                            n_features=5,
+                                            n_redundant=0,
+                                            n_clusters_per_class=1)
         train_X, train_y = X[:90], y[:90]
         test_X, test_y = X[90:], y[90:]
 
@@ -212,10 +276,13 @@ class TestEnsmbleLearning(unittest.TestCase):
         y_pred = model.predict(test_X)
         print('Random Forest Accuracy:', model.accuracy_score(test_y, y_pred))
 
+
 class TestPCA(unittest.TestCase):
+
     def test_evd(self):
         X, _ = datasets.load_iris(return_X_y=True)
-        train_X, test_X = sklearn.model_selection.train_test_split(X, test_size=0.2, random_state=42)
+        train_X, test_X = sklearn.model_selection.train_test_split(
+            X, test_size=0.2, random_state=42)
 
         model = EVD(n_components=2)
         model.fit(train_X)
@@ -225,13 +292,15 @@ class TestPCA(unittest.TestCase):
 
     def test_svd(self):
         X, _ = datasets.load_iris(return_X_y=True)
-        train_X, test_X = sklearn.model_selection.train_test_split(X, test_size=0.2, random_state=42)
+        train_X, test_X = sklearn.model_selection.train_test_split(
+            X, test_size=0.2, random_state=42)
 
         model = SVD(n_components=2)
         model.fit(train_X)
 
         reduced_X = model.predict(test_X)
         print('SVD Reduced Data:', reduced_X)
+
 
 if __name__ == '__main__':
     unittest.main()
