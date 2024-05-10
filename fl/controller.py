@@ -37,6 +37,9 @@ class FLController:
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
+    def predict(self, loader):
+        return self.server.predict(loader)
+
     def avg_grad_train(self, n_rounds):
         self.server.model.train()
         progress_bar = tqdm(range(n_rounds * self.n_clients))

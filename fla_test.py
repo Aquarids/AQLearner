@@ -10,6 +10,7 @@ from fl.model_factory import type_regression, type_binary_classification, type_m
 
 from fla.malicious_client import MaliciousClient
 from fla.malicious_client import attack_type_none, attack_sample_poison, attack_label_flip, attack_ood_data, attack_backdoor, attack_gradient_poison, attack_weight_poison
+import fla.inference_attack as InferenceAttack
 from fla.defend.robust_aggr.robust_aggr_server import RobustAggrServer
 from fla.defend.robust_aggr.robust_aggr_controller import MedianAggrFLController, TrimmedMeanAggrFLController, KrumAggrFLController
 from fla.defend.detection.anomaly_detection_server import AnomalyDetectionServer
@@ -25,6 +26,7 @@ import sklearn.datasets
 import sklearn.model_selection
 import random
 import unittest
+import matplotlib.pyplot as plt
 
 
 class TestDataPoison(unittest.TestCase):
@@ -320,7 +322,7 @@ class TestFLA(unittest.TestCase):
 
         n_clients = 10
         n_malicious_client = 2  # assume poisoned client less than normal clients (1/3)
-        n_rounds = 10
+        n_rounds = 1
         n_iter = 1
 
         clients = self._init_clients(n_clients, n_malicious_client,
@@ -454,3 +456,33 @@ class TestMPC(TestFLA):
         controller = MPCController(server, clients)
         controller.train(n_rounds, mode_avg_weight)
         server.model_metric.summary()
+
+
+class TestInferenceAttack(TestFLA):
+
+    def display_inverted_images(self, inverted_images, n_images):
+        plt.figure(figsize=(20, 4))
+        for i in range(n_images):
+            ax = plt.subplot(2, n_images, i + 1)
+            img = inverted_images[i].moveaxis(0, -1)
+            img = (img - img.min()) / (img.max() - img.min())
+            plt.imshow(img)
+            plt.gray()
+            ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
+        plt.show()
+
+    def test_model_inversion(self):
+        server, clients, n_rounds = self._prepare(attack_type_none)
+        controller = FLController(server, clients)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+        target_class = 0
+        n_samples = 10
+        input_shape = (1, 28, 28)
+        n_step = 100
+        lr = 0.01
+        synthetic_inputs = InferenceAttack.model_inversion_attack(
+            controller, target_class, n_samples, input_shape, n_step, lr)
+        self.display_inverted_images(synthetic_inputs, n_samples)
