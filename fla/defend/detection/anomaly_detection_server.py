@@ -6,11 +6,10 @@ from fla.defend.detection.anomaly_detection import AnomalyDetection
 
 class AnomalyDetectionServer(Server):
 
-    def __init__(self, model: torch.nn.Module, optimizer, criterion, type, eps,
+    def __init__(self, model: torch.nn.Module, optimizer, criterion, type, k,
                  min_samples):
         super().__init__(model, optimizer, criterion, type)
-        self.anomaly_detection = AnomalyDetection(eps=eps,
-                                                  min_samples=min_samples)
+        self.anomaly_detection = AnomalyDetection(k=k, min_samples=min_samples)
 
     def calculate_gradients(self, grads):
         anomaly_index = self.anomaly_detection.detect_grads(grads)

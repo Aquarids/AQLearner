@@ -409,7 +409,7 @@ class TestAnomalyDetection(TestFLA):
                                       optimizer,
                                       criterion,
                                       model_type,
-                                      eps=0.5,
+                                      k=2,
                                       min_samples=2)
 
     def test_gradient_anomaly_detection(self):
