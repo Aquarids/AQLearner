@@ -54,12 +54,13 @@ Here is a detailed list of the contents of this project, including the correspon
 | Federated Learning | Privacy Intersection         | Simple demonstration of privacy intersection using hashing |
 | Federated Learning | Configuration Mapping        | Implementation of JSON configuration to PyTorch model mapping |
 | Federated Learning | Federated Learning           | Simple federated learning demonstration with support for average gradients, weidghts and votes |
-| Federated Learning Attack & Defend | Data Poison  | Simple implementation of label flipping, sample poisoning and out of distribution data increasing |
-| Federated Learning Attack & Defend | Model Poison | Simple implementation of poisoned gradients and poisoned weights |
-| Federated Learning Attack & Defend | Backdoor Attack | Simple implementation of backdoor attacking |
-| Federated Learning Attack & Defend | Robust Aggregation | Simple implementation of median, trimmed mean and krum aggregation |
-| Federated Learning Attack & Defend | Anomaly Detection | Simple implementation of anomaly detection by DBSCAN|
-| Federated Learning Attack & Defend | MPC | Simple implementation of MPC by adding noise to gradients or weights|
+| Federated Learning Security | Data Poison         | Simple implementation of label flipping, sample poisoning and out of distribution data increasing |
+| Federated Learning Security | Model Poison        | Simple implementation of poisoned gradients and poisoned weights |
+| Federated Learning Security | Backdoor Attack     | Simple implementation of backdoor attacking |
+| Federated Learning Security | Inference Attack(Inference Stage) | Implement simple inference phase attacks to speculate on the existence of unique labels, features, or samples in the model's training set |
+| Federated Learning Security | Robust Aggregation  | Simple implementation of median, trimmed mean and krum aggregation |
+| Federated Learning Security | Anomaly Detection   | Simple implementation of anomaly detection by DBSCAN|
+| Federated Learning Security | MPC                 | Simple implementation of MPC by adding noise to gradients or weights|
 
 ## Usage
 
@@ -138,12 +139,13 @@ python -m unittest <test_file>.<test_class>.<test_method>
 | 联邦学习      | 隐私求交                       | 基于哈希的简单隐私求交示意                    |
 | 联邦学习      | 配置映射                       | 实现JSON配置到PyTorch模型的映射               |
 | 联邦学习      | 联邦学习                       | 实现简单联邦学习示意，支持梯度、权重或投票的联邦平均  |
-| 联邦学习攻防   | 数据投毒                      | 实现简单的标签反转，样本投毒和分布外数据投毒 |
-| 联邦学习攻防   | 模型投毒                      | 实现简单的梯度投毒和权重投毒 |
-| 联邦学习攻防   | 后门攻击                      | 实现简单的条件后门攻击 |
-| 联邦学习攻防   | 稳健聚合                      | 实现简单的中值、截尾均值和Krum聚合 |
-| 联邦学习攻防   | 异常检测                      | 基于DBSCAN的异常梯度或梯度参数检测 |
-| 联邦学习攻防   | 多方安全计算                   | 通过向梯度或者权重添加噪声的方式简单实现MPC |
+| 联邦学习安全   | 数据投毒                      | 实现简单的标签反转，样本投毒和分布外数据投毒 |
+| 联邦学习安全   | 模型投毒                      | 实现简单的梯度投毒和权重投毒 |
+| 联邦学习安全   | 后门攻击                      | 实现简单的条件后门攻击 |
+| 联邦学习安全   | 推理攻击（推理阶段）            | 实现简单的推理阶段对模型训练集独特标签、特征或样本存在性推测攻击 |
+| 联邦学习安全   | 稳健聚合                      | 实现简单的中值、截尾均值和Krum聚合 |
+| 联邦学习安全   | 异常检测                      | 基于DBSCAN的异常梯度或梯度参数检测 |
+| 联邦学习安全   | 多方安全计算                   | 通过向梯度或者权重添加噪声的方式简单实现MPC |
 
 ## 使用方法
 
