@@ -297,7 +297,7 @@ class TestFLA(unittest.TestCase):
             }]
         }
 
-    def _prepare(self, attack_type):
+    def _init_dataloader(self):
         transform = torchvision.transforms.Compose([
             torchvision.transforms.Resize((28, 28)),
             torchvision.transforms.ToTensor(),
@@ -319,10 +319,14 @@ class TestFLA(unittest.TestCase):
         test_loader = torch.utils.data.DataLoader(test_dataset,
                                                   batch_size=32,
                                                   shuffle=False)
+        return train_loader, test_loader
+
+    def _prepare(self, attack_type):
+        train_loader, test_loader = self._init_dataloader()
 
         n_clients = 10
         n_malicious_client = 2  # assume poisoned client less than normal clients (1/3)
-        n_rounds = 1
+        n_rounds = 10
         n_iter = 1
 
         clients = self._init_clients(n_clients, n_malicious_client,
@@ -458,7 +462,7 @@ class TestMPC(TestFLA):
         server.model_metric.summary()
 
 
-class TestInferenceAttack(TestFLA):
+class TestModelInversion(TestFLA):
 
     def display_inverted_images(self, inverted_images, n_images):
         plt.figure(figsize=(20, 4))
@@ -486,3 +490,97 @@ class TestInferenceAttack(TestFLA):
         synthetic_inputs = InferenceAttack.model_inversion_attack(
             controller, target_class, n_samples, input_shape, n_step, lr)
         self.display_inverted_images(synthetic_inputs, n_samples)
+
+
+class TestLabelInference(TestFLA):
+
+    def _exclude_target_dataset(self, dataset, target_class):
+        new_dataset = []
+        for data, label in dataset:
+            if label != target_class:
+                new_dataset.append((data, label))
+        return new_dataset
+
+    def _filter_target_loader(self, loader, target_class):
+        new_dataset = []
+        for data, label in loader.dataset:
+            if label == target_class:
+                new_dataset.append((data, label))
+        return torch.utils.data.DataLoader(new_dataset,
+                                           batch_size=32,
+                                           shuffle=False)
+
+    def _init_dataloader(self, exclude_target_class):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((28, 28)),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5, ), (0.5, ))
+        ])
+
+        train_dataset = torchvision.datasets.MNIST(root='./data',
+                                                   train=True,
+                                                   download=True,
+                                                   transform=transform)
+        test_dataset = torchvision.datasets.MNIST(root='./data',
+                                                  train=False,
+                                                  download=True,
+                                                  transform=transform)
+
+        train_dataset = self._exclude_target_dataset(train_dataset,
+                                                     exclude_target_class)
+        test_dataset = self._exclude_target_dataset(test_dataset,
+                                                    exclude_target_class)
+
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=32,
+                                                   shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset,
+                                                  batch_size=32,
+                                                  shuffle=False)
+
+        return train_loader, test_loader
+
+    def _prepare(self, attack_type, exclude_target_class):
+        train_loader, test_loader = self._init_dataloader(exclude_target_class)
+
+        n_clients = 5
+        n_malicious_client = 0
+        n_rounds = 1
+        n_iter = 1
+
+        clients = self._init_clients(n_clients, n_malicious_client,
+                                     self._model_json(), attack_type)
+        server = self._init_server(self._model_json())
+
+        for i in range(n_clients):
+            clients[i].setDataLoader(train_loader, n_iter)
+        server.setTestLoader(test_loader)
+
+        return server, clients, n_rounds
+
+    def train_model(self, target_class):
+        server, clients, n_rounds = self._prepare(attack_type_none,
+                                                  target_class)
+        controller = FLController(server, clients)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+        return controller
+
+    def test_label_inference(self):
+        target_class = 0  # assume we want to detect target class 0 whether exists
+        threshold = 0.1
+
+        compared_model = self.train_model(-1)
+        attacked_model = self.train_model(target_class)
+
+        attack_loader = self._filter_target_loader(
+            compared_model.server.test_loader, target_class)
+
+        compared_result = InferenceAttack.label_inference_attack(
+            compared_model, target_class, attack_loader, threshold)
+        attacked_result = InferenceAttack.label_inference_attack(
+            attacked_model, target_class, attack_loader, threshold)
+        print(f"Compared model result: Target {target_class} exists - ",
+              compared_result)
+        print(f"Attacked model result: Target {target_class} exists - ",
+              attacked_result)

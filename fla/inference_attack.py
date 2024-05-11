@@ -32,3 +32,17 @@ def model_inversion_attack(controller: FLController, target_class, n_samples,
     progress_bar.close()
 
     return synthetic_inputs.detach()
+
+
+def label_inference_attack(controller: FLController,
+                           target_class,
+                           test_loader,
+                           threshold=0.5):
+    _, y_probs = controller.predict(test_loader)
+    y_probs = torch.tensor(y_probs)
+    target_probs = y_probs[:, target_class]
+    average_probs = target_probs.mean()
+
+    if average_probs > threshold:
+        return True
+    return False
