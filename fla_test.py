@@ -24,6 +24,7 @@ import torch.utils.data
 import torchvision
 import sklearn.datasets
 import sklearn.model_selection
+from sklearn.preprocessing import StandardScaler
 import random
 import unittest
 import matplotlib.pyplot as plt
@@ -580,7 +581,79 @@ class TestLabelInference(TestFLA):
             compared_model, target_class, attack_loader, threshold)
         attacked_result = InferenceAttack.label_inference_attack(
             attacked_model, target_class, attack_loader, threshold)
-        print(f"Compared model result: Target {target_class} exists - ",
+        print(f"Compared model result: Target {target_class} exists -",
               compared_result)
-        print(f"Attacked model result: Target {target_class} exists - ",
+        print(f"Attacked model result: Target {target_class} exists -",
               attacked_result)
+
+
+class TestFeatureInference(TestFLA):
+
+    def _init_dataloader(self):
+        X, y = sklearn.datasets.fetch_california_housing(return_X_y=True)
+        scaler = StandardScaler()
+        X = scaler.fit_transform(X)
+        X, y = torch.tensor(X, dtype=torch.float32), torch.tensor(
+            y, dtype=torch.float32).view(-1, 1)
+        X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
+            X, y, test_size=0.1, random_state=10)
+
+        train_loader = torch.utils.data.DataLoader(
+            torch.utils.data.TensorDataset(X_train, y_train),
+            batch_size=100,
+            shuffle=True)
+
+        test_loader = torch.utils.data.DataLoader(
+            torch.utils.data.TensorDataset(X_test, y_test),
+            batch_size=100,
+            shuffle=False)
+        return train_loader, test_loader
+
+    def _model_json(self):
+        return {
+            "model_type": type_regression,
+            "learning_rate": 0.01,
+            "optimizer": "adam",
+            "criterion": "mse",
+            "layers": [{
+                "type": "linear",
+                "in_features": 8,
+                "out_features": 1
+            }]
+        }
+
+    def _prepare(self):
+        train_loader, test_loader = self._init_dataloader()
+
+        n_clients = 5
+        n_malicious_client = 0
+        n_rounds = 1
+        n_iter = 1
+
+        clients = self._init_clients(n_clients, n_malicious_client,
+                                     self._model_json(), attack_type_none)
+        server = self._init_server(self._model_json())
+
+        for i in range(n_clients):
+            clients[i].setDataLoader(train_loader, n_iter)
+        server.setTestLoader(test_loader)
+
+        return server, clients, n_rounds
+
+    def test_feature_inference(self):
+        server, clients, n_rounds = self._prepare()
+        controller = FLController(server, clients)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+        input_shape = (8, )
+        n_samples = 10
+        feature_index = 0  # assume we want to detect feature 0 whether exists
+        delta = 0.1
+        threshold = 0.05
+
+        result = InferenceAttack.feature_inference_attack(
+            controller, input_shape, n_samples, feature_index, delta,
+            threshold)
+        print(f"Feature Inference Attack: feature {feature_index} exists -",
+              result)
