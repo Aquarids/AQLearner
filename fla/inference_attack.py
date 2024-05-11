@@ -79,3 +79,34 @@ def feature_inference_attack(controller: FLController,
     if confidence_diff_ratio.mean() > threshold:
         return False
     return True
+
+
+def sample_inference_attack(controller: FLController,
+                            target_sample,
+                            input_shape,
+                            n_samples,
+                            threshold=1):
+    random_inputs = torch.randn(n_samples, *input_shape)
+    random_labels = torch.full((n_samples, ), 0)
+    target_input, target_label = target_sample
+
+    random_inputs[0] = target_input
+    random_labels[0] = target_label
+
+    datasets = torch.utils.data.TensorDataset(random_inputs, random_labels)
+    loader = torch.utils.data.DataLoader(datasets,
+                                         batch_size=n_samples,
+                                         shuffle=False)
+
+    y_pred, _ = controller.predict(loader)
+    y_pred = torch.tensor(y_pred)
+    target_output = y_pred[0]
+    random_outputs = y_pred[1:]
+
+    random_mean = torch.mean(random_outputs, dim=0)
+    random_std = torch.std(random_outputs, dim=0)
+    target_z_score = (target_output - random_mean) / random_std
+
+    if abs(target_z_score) > threshold:
+        return True
+    return False

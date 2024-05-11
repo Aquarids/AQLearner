@@ -657,3 +657,26 @@ class TestFeatureInference(TestFLA):
             threshold)
         print(f"Feature Inference Attack: feature {feature_index} exists -",
               result)
+
+
+class TestSampleInference(TestFeatureInference):
+
+    def test_sample_inference(self):
+        server, clients, n_rounds = self._prepare()
+        controller = FLController(server, clients)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+        random_sample = (torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7,
+                                       0.8]), torch.tensor([0.9]))
+        target_sample = clients[0].train_loader.dataset[0]
+        input_shape = (8, )
+        n_samples = 10
+        threshold = 2
+
+        random_result = InferenceAttack.sample_inference_attack(
+            controller, random_sample, input_shape, n_samples, threshold)
+        print("Random Inference Attack: This sample exists -", random_result)
+        target_result = InferenceAttack.sample_inference_attack(
+            controller, target_sample, input_shape, n_samples, threshold)
+        print("Target Inference Attack: This sample exists -", target_result)
