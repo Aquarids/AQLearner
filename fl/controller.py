@@ -37,6 +37,10 @@ class FLController:
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
+    def client_train(self, client: Client, round_idx):
+        client.update_model(self.server.model.state_dict())
+        client.train(round_idx)
+
     def predict(self, loader):
         return self.server.predict(loader)
 
@@ -51,8 +55,7 @@ class FLController:
                     f"Avg gradients training progress, round {round_idx + 1}, client {client_id + 1}"
                 )
                 client = self.clients[client_id]
-                client.update_model(self.server.model.state_dict())
-                client.train(round_idx)
+                self.client_train(client, round_idx)
                 gradients.append(client.get_gradients())
                 progress_bar.update(1)
 

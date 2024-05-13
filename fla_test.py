@@ -17,6 +17,9 @@ from fla.defend.detection.anomaly_detection_server import AnomalyDetectionServer
 from fla.defend.mpc.mpc_server import MPCServer
 from fla.defend.mpc.mpc_client import MPCClient
 from fla.defend.mpc.mpc_controller import MPCController
+from fla.defend.dp.dp_server import OutputPerturbationServer
+from fla.defend.dp.dp_client import InputPerturbationClient, DPSGDClient
+from fla.defend.dp.dp_controller import OutputPerturbationFLController, InputPerturbationFLController, DPSGDFLController
 
 import numpy as np
 import torch
@@ -622,6 +625,14 @@ class TestFeatureInference(TestRegressionFLA):
 
 class TestSampleInference(TestRegressionFLA):
 
+    def _infer_sample(self, controller, sample):
+        input_shape = (8, )
+        n_samples = 10
+        threshold = 2
+        return InferenceAttack.sample_inference_attack(controller, sample,
+                                                       input_shape, n_samples,
+                                                       threshold)
+
     def test_sample_inference(self):
         server, clients, n_rounds = self._prepare()
         controller = FLController(server, clients)
@@ -631,13 +642,116 @@ class TestSampleInference(TestRegressionFLA):
         random_sample = (torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7,
                                        0.8]), torch.tensor([0.9]))
         target_sample = clients[0].train_loader.dataset[0]
-        input_shape = (8, )
-        n_samples = 10
-        threshold = 2
 
-        random_result = InferenceAttack.sample_inference_attack(
-            controller, random_sample, input_shape, n_samples, threshold)
+        random_result = self._infer_sample(controller, random_sample)
+        target_result = self._infer_sample(controller, target_sample)
+
         print("Random Inference Attack: This sample exists -", random_result)
-        target_result = InferenceAttack.sample_inference_attack(
-            controller, target_sample, input_shape, n_samples, threshold)
         print("Target Inference Attack: This sample exists -", target_result)
+
+
+class TestDP(TestSampleInference):
+
+    type_output_perturbation = "output_perturbation"
+    type_input_perturbation = "input_perturbation"
+    type_sgd_perturbation = "sgd_perturbation"
+
+    def _init_server(self, model_factory_json, type):
+        model, model_type, optimizer, criterion = ModelFactory().create_model(
+            model_factory_json)
+        if type == TestDP.type_output_perturbation:
+            return OutputPerturbationServer(model, optimizer, criterion,
+                                            model_type)
+        else:
+            return Server(model, optimizer, criterion, model_type)
+
+    def _init_clients(self, n_clients, n_malicious_client, model_factory_json,
+                      attack_type, type):
+        clients = []
+        for _ in range(n_clients):
+            model, model_type, optimizer, criterion = ModelFactory(
+            ).create_model(model_factory_json)
+            if type == TestDP.type_input_perturbation:
+                client = InputPerturbationClient(model,
+                                                 criterion,
+                                                 optimizer,
+                                                 type=model_type)
+            elif type == TestDP.type_sgd_perturbation:
+                client = DPSGDClient(model,
+                                     criterion,
+                                     optimizer,
+                                     type=model_type)
+            else:
+                client = Client(model, criterion, optimizer, type=model_type)
+            clients.append(client)
+        return clients
+
+    def _prepare(self, type):
+        train_loader, test_loader = self._init_dataloader()
+
+        n_clients = 10
+        n_malicious_client = 2
+        n_rounds = 1
+        n_iter = 1
+
+        clients = self._init_clients(n_clients,
+                                     n_malicious_client,
+                                     self._model_json(),
+                                     attack_type_none,
+                                     type=type)
+        server = self._init_server(self._model_json(), type=type)
+
+        for i in range(n_clients):
+            if type == TestDP.type_input_perturbation:
+                clients[i].setDataLoader(train_loader,
+                                         n_iter,
+                                         epsilon=1,
+                                         delta=1,
+                                         sensitivity=0.001)
+            else:
+                clients[i].setDataLoader(train_loader, n_iter)
+        server.setTestLoader(test_loader)
+
+        return server, clients, n_rounds
+
+    def test_output_perturbation(self):
+        server, clients, n_rounds = self._prepare(
+            type=TestDP.type_output_perturbation)
+        controller = OutputPerturbationFLController(server,
+                                                    clients,
+                                                    epsilon=0.1)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+        target_sample = clients[0].train_loader.dataset[0]
+        target_result = self._infer_sample(controller, target_sample)
+        print("DP Defend Target Inference Attack Result:",
+              target_result == False)
+
+    def test_input_perturbation(self):
+        server, clients, n_rounds = self._prepare(
+            type=TestDP.type_input_perturbation)
+        controller = InputPerturbationFLController(server, clients)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+        target_sample = clients[0].train_loader.dataset[0]
+        target_result = self._infer_sample(controller, target_sample)
+        print("DP Defend Target Inference Attack Result:",
+              target_result == False)
+
+    def test_sgd_perturbation(self):
+        server, clients, n_rounds = self._prepare(
+            type=TestDP.type_sgd_perturbation)
+        controller = DPSGDFLController(server,
+                                       clients,
+                                       sigma=0.1,
+                                       clip_value=0.1,
+                                       delta=1e-5)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+        target_sample = clients[0].train_loader.dataset[0]
+        target_result = self._infer_sample(controller, target_sample)
+        print("DP Defend Target Inference Attack Result:",
+              target_result == False)

@@ -2,6 +2,9 @@ import unittest
 import Crypto.Util.number
 import random
 import numpy as np
+import torch
+import torch.utils.data
+import torchvision
 
 from crypto.zero_knowledge_proof import ZeroKnowledgeProof
 from crypto.oblivious_transfer import OTSender, OTReceiver
@@ -11,6 +14,10 @@ from crypto.secret_share import ShamirSecretShare
 from crypto.homo_encryption import AddHomomorphicEncryption
 from crypto.homo_encryption import ElGamalHE
 from crypto.smpc import SMPCParty, SMPCCenter
+import crypto.diff_privacy as DiffPrivacy
+
+import dl.metrics as Metrics
+from dl.simple_cnn_classifier import SimpleCNNClassifier
 
 
 class TestZeroKnowledgeProof(unittest.TestCase):
@@ -202,29 +209,131 @@ class TestSMPC(unittest.TestCase):
 
 class TestDiffPrivacy(unittest.TestCase):
 
-    def test_diff_privacy(self):
-        true_counts = np.random.randint(100, 200, size=100)
+    def test_laplace(self):
+        true_counts = torch.randint(0, 100, (200, 100), dtype=torch.float32)
 
-        epsolon = 1
+        epsilon = 0.1
         sensitivity = 1
-        dp_counts = [
-            count +
-            np.random.laplace(loc=0, scale=sensitivity / epsolon, size=100)
-            for count in true_counts
-        ]
+        dp_counts = DiffPrivacy.laplace_dp(true_counts, epsilon, sensitivity)
         print("DP Counts:", dp_counts)
 
-        true_avg = np.mean(true_counts)
-        dp_avg = np.mean(dp_counts)
+        true_avg = torch.mean(true_counts)
+        dp_avg = torch.mean(dp_counts)
         print("True Average:", true_avg)
         print("DP Average:", dp_avg)
         print("Difference:", abs(true_avg - dp_avg))
 
-        true_var = np.var(true_counts)
-        dp_var = np.var(dp_counts)
+        true_var = torch.var(true_counts)
+        dp_var = torch.var(dp_counts)
         print("True Variance:", true_var)
         print("DP Variance:", dp_var)
         print("Difference:", abs(true_var - dp_var))
+
+    def test_gaussian(self):
+        true_counts = torch.randint(0, 100, (200, 100), dtype=torch.float32)
+
+        epsilon = 0.1
+        sensitivity = 1
+        delta = 0.1
+        dp_counts = DiffPrivacy.gaussian_dp(true_counts, epsilon, delta,
+                                            sensitivity)
+        print("DP Counts:", dp_counts)
+
+        true_avg = torch.mean(true_counts)
+        dp_avg = torch.mean(dp_counts)
+        print("True Average:", true_avg)
+        print("DP Average:", dp_avg)
+        print("Difference:", abs(true_avg - dp_avg))
+
+        true_var = torch.var(true_counts)
+        dp_var = torch.var(dp_counts)
+        print("True Variance:", true_var)
+        print("DP Variance:", dp_var)
+        print("Difference:", abs(true_var - dp_var))
+
+    def test_dp_sgd(self):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((28, 28)),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5, ), (0.5, ))
+        ])
+
+        train_dataset = torchvision.datasets.MNIST(root='./data',
+                                                   train=True,
+                                                   download=True,
+                                                   transform=transform)
+        test_dataset = torchvision.datasets.MNIST(root='./data',
+                                                  train=False,
+                                                  download=True,
+                                                  transform=transform)
+
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=64,
+                                                   shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset,
+                                                  batch_size=64,
+                                                  shuffle=False)
+
+        dp_sgd_model = SimpleCNNClassifier()
+        dp_sgd = DiffPrivacy.DPSGD(dp_sgd_model,
+                                   sigma=0.1,
+                                   clip_value=0.1,
+                                   delta=0.1)
+        dp_sgd.train(train_loader, n_iters=10)
+
+        compared_model = SimpleCNNClassifier()
+        compared_model.fit(train_loader, n_iters=10)
+
+        dp_y_pred, _ = dp_sgd_model.predict(test_loader)
+        y_pred, _ = compared_model.predict(test_loader)
+        y_test = []
+        for _, y in test_loader:
+            y_test += y.tolist()
+
+        print('DP-SGD Accuracy:',
+              Metrics.accuracy(np.array(y_test), np.array(dp_y_pred)))
+        print('SimpleCNNClassifier Accuracy:',
+              Metrics.accuracy(np.array(y_test), np.array(y_pred)))
+
+    def test_pate(self):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((28, 28)),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5, ), (0.5, ))
+        ])
+
+        train_dataset = torchvision.datasets.MNIST(root='./data',
+                                                   train=True,
+                                                   download=True,
+                                                   transform=transform)
+        test_dataset = torchvision.datasets.MNIST(root='./data',
+                                                  train=False,
+                                                  download=True,
+                                                  transform=transform)
+
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=64,
+                                                   shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset,
+                                                  batch_size=64,
+                                                  shuffle=False)
+
+        model = SimpleCNNClassifier()
+        teachers = [SimpleCNNClassifier() for _ in range(5)]
+        pate = DiffPrivacy.PATE(model,
+                                teachers,
+                                epsilon=0.001,
+                                sensitivity=1,
+                                n_classes=10)
+        pate.train(train_loader, n_iters=10)
+
+        y_pred, _ = model.predict(test_loader)
+        y_test = []
+        for _, y in test_loader:
+            y_test += y.tolist()
+
+        print('PATE Accuracy:',
+              Metrics.accuracy(np.array(y_test), np.array(y_pred)))
 
 
 if __name__ == '__main__':

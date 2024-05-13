@@ -105,8 +105,8 @@ def sample_inference_attack(controller: FLController,
 
     random_mean = torch.mean(random_outputs, dim=0)
     random_std = torch.std(random_outputs, dim=0)
-    target_z_score = (target_output - random_mean) / random_std
+    target_z_score = abs((target_output - random_mean) / random_std)
 
-    if abs(target_z_score) > threshold:
+    if target_z_score > threshold:
         return True
     return False
