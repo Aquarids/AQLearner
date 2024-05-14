@@ -45,7 +45,7 @@ Here is a detailed list of the contents of this project, including the correspon
 | Cryptography | Shamir's Secret Sharing            | Implementation of Shamir's 2 out of n secret sharing scheme |
 | Cryptography | Zero-Knowledge Proofs              | Simple demonstration of zero-knowledge proofs for root_x and root_xv_inv challenges |
 | Cryptography | Secure Multi-Party Computation     | Demonstration of secure multi-party computation using ElGamal encryption |
-| Cryptography | Differential Privacy               | Demonstration of differential privacy using Laplacian noise |
+| Cryptography | Differential Privacy               | Demonstration of differential privacy, including Lapalacian noise, Gaussian noise DPSGD and PATE |
 | Blockchain | Block Class                          | Simple block implementation based on Merkle Trees |
 | Blockchain | Node Class                           | Implementation of simple light and full nodes    |
 | Blockchain | Transaction Class                    | Basic transaction entity class implementation  |
@@ -61,6 +61,7 @@ Here is a detailed list of the contents of this project, including the correspon
 | Federated Learning Security | Robust Aggregation  | Simple implementation of median, trimmed mean and krum aggregation |
 | Federated Learning Security | Anomaly Detection   | Simple implementation of anomaly detection by DBSCAN|
 | Federated Learning Security | MPC                 | Simple implementation of MPC by adding noise to gradients or weights|
+| Federated Learning Security | Differential Privacy | Simple implementation of DP-based FL defense |
 
 ## Usage
 
@@ -130,7 +131,7 @@ python -m unittest <test_file>.<test_class>.<test_method>
 | 密码学        | Shamir秘密共享               | 实现Shamir的2 out of n秘密共享方案            |
 | 密码学        | 零知识证明                   | 实现简单root_x和root_xv_inv挑战的零知识证明示意  |
 | 密码学        | 安全多方计算                 | 实现基于ElGamal加密的安全多方计算示意            |
-| 密码学        | 差分隐私                      | 实现拉普拉斯噪声的差分隐私示意                 |
+| 密码学        | 差分隐私                      | 实现拉普拉斯噪音，高斯噪音，差分梯度下降和PATE的差分隐私方法 |
 | 区块链        | 区块类                        | 基于Merkle树实现的简单区块模型                  |
 | 区块链        | 节点类                         | 实现简单的轻节点和全节点                         |
 | 区块链        | 交易类                         | 实现基础的交易实体类                             |
@@ -146,6 +147,7 @@ python -m unittest <test_file>.<test_class>.<test_method>
 | 联邦学习安全   | 稳健聚合                      | 实现简单的中值、截尾均值和Krum聚合 |
 | 联邦学习安全   | 异常检测                      | 基于DBSCAN的异常梯度或梯度参数检测 |
 | 联邦学习安全   | 多方安全计算                   | 通过向梯度或者权重添加噪声的方式简单实现MPC |
+| 联邦学习安全   | 差分隐私                      | 基于差分隐私的联邦学习防御简单实现 |
 
 ## 使用方法
 
