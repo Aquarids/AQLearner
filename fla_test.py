@@ -11,6 +11,7 @@ from fl.model_factory import type_regression, type_binary_classification, type_m
 from fla.malicious_client import MaliciousClient
 from fla.malicious_client import attack_type_none, attack_sample_poison, attack_label_flip, attack_ood_data, attack_backdoor, attack_gradient_poison, attack_weight_poison
 import fla.inference_attack as InferenceAttack
+from fla.membership_inference import MembershipInferenceAttack
 from fla.defend.robust_aggr.robust_aggr_server import RobustAggrServer
 from fla.defend.robust_aggr.robust_aggr_controller import MedianAggrFLController, TrimmedMeanAggrFLController, KrumAggrFLController
 from fla.defend.detection.anomaly_detection_server import AnomalyDetectionServer
@@ -211,6 +212,56 @@ class TestModelPoison(unittest.TestCase):
         print("Normal accuracy: ", normal_accuracy)
         print("Gradient Poison accuracy: ", gradient_poision_accuracy)
         print("Weight Poison accuracy: ", weight_poison_accuracy)
+
+
+class TestMembershipInferenceAttack(unittest.TestCase):
+
+    def test_membership_inference_attack(self):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((28, 28)),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5, ), (0.5, ))
+        ])
+
+        train_dataset = torchvision.datasets.MNIST(root='./data',
+                                                   train=True,
+                                                   download=True,
+                                                   transform=transform)
+        test_dataset = torchvision.datasets.MNIST(root='./data',
+                                                  train=False,
+                                                  download=True,
+                                                  transform=transform)
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=64,
+                                                   shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset,
+                                                  batch_size=64,
+                                                  shuffle=False)
+
+        model = SimpleCNNClassifier()
+        model.fit(train_loader, learning_rate=0.01, n_iters=1)
+        y_pred, y_prob = model.predict(test_loader)
+        y_test = []
+        for _, y in test_loader:
+            y_test += y.tolist()
+        accuracy = Metrics.accuracy(np.array(y_test), np.array(y_pred))
+        print("Target model accuracy: ", accuracy)
+
+        attacker = MembershipInferenceAttack(model,
+                                             input_shape=(1, 28, 28),
+                                             n_classes=10)
+        membership_dataset, non_membership_dataset = attacker.create_shadow_dataset(
+            1000)
+        member_loader = torch.utils.data.DataLoader(membership_dataset,
+                                                    batch_size=100,
+                                                    shuffle=True)
+        non_member_loader = torch.utils.data.DataLoader(non_membership_dataset,
+                                                        batch_size=100,
+                                                        shuffle=True)
+        attacker.train_shadow_model(member_loader, non_member_loader, 10)
+        attack_accuracy = attacker.attack(member_loader, non_member_loader, 10,
+                                          0.8)
+        print("Membership Inference Attack Accuracy: ", attack_accuracy)
 
 
 class TestClassificationFLA(unittest.TestCase):

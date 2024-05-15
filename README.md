@@ -58,6 +58,7 @@ Here is a detailed list of the contents of this project, including the correspon
 | Federated Learning Security | Model Poison        | Simple implementation of poisoned gradients and poisoned weights |
 | Federated Learning Security | Backdoor Attack     | Simple implementation of backdoor attacking |
 | Federated Learning Security | Inference Attack(Inference Stage) | Implement simple inference phase attacks to speculate on the existence of unique labels, features, or samples in the model's training set |
+| Federated Learning Security | Membership Inference| Simple implementation of membership inference based on shadow model |
 | Federated Learning Security | Robust Aggregation  | Simple implementation of median, trimmed mean and krum aggregation |
 | Federated Learning Security | Anomaly Detection   | Simple implementation of anomaly detection by DBSCAN|
 | Federated Learning Security | MPC                 | Simple implementation of MPC by adding noise to gradients or weights|
@@ -144,6 +145,7 @@ python -m unittest <test_file>.<test_class>.<test_method>
 | 联邦学习安全   | 模型投毒                      | 实现简单的梯度投毒和权重投毒 |
 | 联邦学习安全   | 后门攻击                      | 实现简单的条件后门攻击 |
 | 联邦学习安全   | 推理攻击（推理阶段）            | 实现简单的推理阶段对模型训练集独特标签、特征或样本存在性推测攻击 |
+| 联邦学习安全   | 成员推理                      | 实现基于影子模型的成员推理攻击 |
 | 联邦学习安全   | 稳健聚合                      | 实现简单的中值、截尾均值和Krum聚合 |
 | 联邦学习安全   | 异常检测                      | 基于DBSCAN的异常梯度或梯度参数检测 |
 | 联邦学习安全   | 多方安全计算                   | 通过向梯度或者权重添加噪声的方式简单实现MPC |
