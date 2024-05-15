@@ -54,17 +54,18 @@ def feature_inference_attack(controller: FLController,
                              feature_index,
                              delta=0.1,
                              threshold=0.05):
-    synthetic_input = torch.randn(n_samples, *input_shape)
-    synthetic_label = torch.full((n_samples, ), 0)
-    normal_dataset = torch.utils.data.TensorDataset(synthetic_input,
-                                                    synthetic_label)
+    random_input = torch.randn(n_samples, *input_shape)
+    random_label = torch.full((n_samples, ), 0)
+    normal_dataset = torch.utils.data.TensorDataset(random_input, random_label)
     normal_loader = torch.utils.data.DataLoader(normal_dataset,
                                                 batch_size=n_samples,
                                                 shuffle=False)
 
+    synthetic_input = random_input.clone()
     synthetic_input[:, feature_index] += delta
+
     attack_dataset = torch.utils.data.TensorDataset(synthetic_input,
-                                                    synthetic_label)
+                                                    random_label)
     attack_loader = torch.utils.data.DataLoader(attack_dataset,
                                                 batch_size=n_samples,
                                                 shuffle=False)
@@ -76,9 +77,10 @@ def feature_inference_attack(controller: FLController,
 
     confidence_diff = torch.abs(attack_y_pred - normal_y_pred)
     confidence_diff_ratio = confidence_diff / normal_y_pred
+
     if confidence_diff_ratio.mean() > threshold:
-        return False
-    return True
+        return True
+    return False
 
 
 def sample_inference_attack(controller: FLController,

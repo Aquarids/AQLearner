@@ -21,6 +21,7 @@ from fla.defend.mpc.mpc_controller import MPCController
 from fla.defend.dp.dp_server import OutputPerturbationServer
 from fla.defend.dp.dp_client import InputPerturbationClient, DPSGDClient
 from fla.defend.dp.dp_controller import OutputPerturbationFLController, InputPerturbationFLController, DPSGDFLController
+from fla.defend.feature_squeeze.feature_squeeze_client import FeatureSqueezeClient
 
 import numpy as np
 import torch
@@ -662,9 +663,44 @@ class TestFeatureInference(TestRegressionFLA):
         server.model_metric.summary()
 
         input_shape = (8, )
-        n_samples = 10
+        n_samples = 100
         feature_index = 0  # assume we want to detect feature 0 whether exists
-        delta = 0.1
+        delta = 1.0
+        threshold = 0.05
+
+        result = InferenceAttack.feature_inference_attack(
+            controller, input_shape, n_samples, feature_index, delta,
+            threshold)
+        print(f"Feature Inference Attack: feature {feature_index} exists -",
+              result)
+
+
+class TestFeatureSqueeze(TestRegressionFLA):
+
+    def _init_clients(self, n_clients, n_malicious_client, model_factory_json,
+                      attack_type):
+        clients = []
+        for _ in range(n_clients):
+            model, model_type, optimizer, criterion = ModelFactory(
+            ).create_model(model_factory_json)
+            client = FeatureSqueezeClient(model,
+                                          criterion,
+                                          optimizer,
+                                          type=model_type)
+            client.set_bit_depth(3)
+            clients.append(client)
+        return clients
+
+    def test_feature_squeeze(self):
+        server, clients, n_rounds = self._prepare()
+        controller = FLController(server, clients)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+        input_shape = (8, )
+        n_samples = 100
+        feature_index = 0  # assume we want to detect feature 0 whether exists
+        delta = 1.0
         threshold = 0.05
 
         result = InferenceAttack.feature_inference_attack(

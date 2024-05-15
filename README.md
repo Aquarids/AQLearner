@@ -60,6 +60,7 @@ Here is a detailed list of the contents of this project, including the correspon
 | Federated Learning Security | Inference Attack(Inference Stage) | Implement simple inference phase attacks to speculate on the existence of unique labels, features, or samples in the model's training set |
 | Federated Learning Security | Membership Inference| Simple implementation of membership inference based on shadow model |
 | Federated Learning Security | Robust Aggregation  | Simple implementation of median, trimmed mean and krum aggregation |
+| Federated Learning Security | Feature Squeezing   | Simple implementation of feature squeezing based on bit depth compression |
 | Federated Learning Security | Anomaly Detection   | Simple implementation of anomaly detection by DBSCAN|
 | Federated Learning Security | MPC                 | Simple implementation of MPC by adding noise to gradients or weights|
 | Federated Learning Security | Differential Privacy | Simple implementation of DP-based FL defense |
@@ -147,6 +148,7 @@ python -m unittest <test_file>.<test_class>.<test_method>
 | 联邦学习安全   | 推理攻击（推理阶段）            | 实现简单的推理阶段对模型训练集独特标签、特征或样本存在性推测攻击 |
 | 联邦学习安全   | 成员推理                      | 实现基于影子模型的成员推理攻击 |
 | 联邦学习安全   | 稳健聚合                      | 实现简单的中值、截尾均值和Krum聚合 |
+| 联邦学习安全   | 特征压缩                      | 实现基于位深度压缩的特征压缩方法 |
 | 联邦学习安全   | 异常检测                      | 基于DBSCAN的异常梯度或梯度参数检测 |
 | 联邦学习安全   | 多方安全计算                   | 通过向梯度或者权重添加噪声的方式简单实现MPC |
 | 联邦学习安全   | 差分隐私                      | 基于差分隐私的联邦学习防御简单实现 |
