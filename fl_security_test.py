@@ -8,8 +8,10 @@ from fl.controller import FLController, mode_avg_grad, mode_avg_weight, mode_avg
 from fl.model_factory import ModelFactory
 from fl.model_factory import type_regression, type_binary_classification, type_multi_classification
 
+from fl_security.attack.training.malicious_controller import MaliciousFLController
 from fl_security.attack.training.malicious_client import MaliciousClient
 from fl_security.attack.training.malicious_client import attack_type_none, attack_sample_poison, attack_label_flip, attack_ood_data, attack_backdoor, attack_gradient_poison, attack_weight_poison
+from fl_security.attack.training.leakage_inference import LeakageInferenceAttack
 import fl_security.attack.inference.common_inference as InferenceAttack
 from fl_security.attack.inference.membership_inference import MembershipInferenceAttack
 from fl_security.defend.robust_aggr.robust_aggr_server import RobustAggrServer
@@ -369,7 +371,9 @@ class TestClassificationFLA(unittest.TestCase):
                                            batch_size=32,
                                            shuffle=False)
 
-    def _init_dataloader(self, exclude_target_class=-1):
+    def _init_dataloader(self,
+                         exclude_target_class=-1,
+                         filter_target_class=-1):
         transform = torchvision.transforms.Compose([
             torchvision.transforms.Resize((28, 28)),
             torchvision.transforms.ToTensor(),
@@ -397,6 +401,13 @@ class TestClassificationFLA(unittest.TestCase):
         test_loader = torch.utils.data.DataLoader(test_dataset,
                                                   batch_size=32,
                                                   shuffle=False)
+
+        if filter_target_class != -1:
+            train_loader = self._filter_target_loader(train_loader,
+                                                      filter_target_class)
+            test_loader = self._filter_target_loader(test_loader,
+                                                     filter_target_class)
+
         return train_loader, test_loader
 
     def _prepare(self, attack_type, exclude_target_class=-1):
@@ -842,3 +853,52 @@ class TestDP(TestSampleInference):
         target_result = self._infer_sample(controller, target_sample)
         print("DP Defend Target Inference Attack Result:",
               target_result == False)
+
+
+class TestLeakageAttack(TestClassificationFLA):
+
+    def _prepare(self, attack_type):
+        train_loader, test_loader = self._init_dataloader(
+            filter_target_class=0)
+
+        n_clients = 5
+        n_malicious_client = 0
+        n_rounds = 1
+        n_iter = 1
+
+        clients = self._init_clients(n_clients, n_malicious_client,
+                                     self._model_json(), attack_type)
+        server = self._init_server(self._model_json())
+
+        for i in range(n_clients):
+            clients[i].setDataLoader(train_loader, n_iter)
+        server.setTestLoader(test_loader)
+
+        return server, clients, n_rounds
+
+    def test_grad_leakage_attack(self):
+        server, clients, n_rounds = self._prepare(attack_type_none)
+        controller = MaliciousFLController(server, clients)
+        controller.train(n_rounds, mode_avg_grad)
+        server.model_metric.summary()
+
+        target_round = 0
+        target_client_idx = 0
+        target_grads = controller.get_leaked_grad(
+        )[target_round][target_client_idx]
+
+        # use same model to attack
+        attack_model, _, _, _ = ModelFactory().create_model(self._model_json())
+
+        target_shape = (1, 28, 28)
+        n_target_samples = 1
+        n_target_classes = 10
+        attack = LeakageInferenceAttack(attack_model, target_shape,
+                                        n_target_classes)
+        reconstructed_data = attack.reconstruct_inputs(target_grads,
+                                                       n_target_samples,
+                                                       lr=0.01,
+                                                       n_iter=10000)[0]
+        original_data = clients[target_client_idx].train_loader.dataset[0][0]
+
+        attack.visualize(original_data, reconstructed_data)

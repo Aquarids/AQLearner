@@ -18,7 +18,7 @@ class TeacherModel(torch.nn.Module):
         return x
 
     def fit(self, loader, learning_rate=0.01, n_epochs=10):
-        ceriterion = torch.nn.CrossEntropyLoss()
+        criterion = torch.nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
 
         self.train()
@@ -28,7 +28,7 @@ class TeacherModel(torch.nn.Module):
             for X, y in loader:
                 optimizer.zero_grad()
                 outputs = self.forward(X)
-                loss = ceriterion(outputs, y)
+                loss = criterion(outputs, y)
                 loss.backward()
                 optimizer.step()
                 progress_bar.update(1)
