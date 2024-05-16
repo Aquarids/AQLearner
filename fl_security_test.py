@@ -858,10 +858,9 @@ class TestDP(TestSampleInference):
 class TestLeakageAttack(TestClassificationFLA):
 
     def _prepare(self, attack_type):
-        train_loader, test_loader = self._init_dataloader(
-            filter_target_class=0)
+        train_loader, test_loader = self._init_dataloader()
 
-        n_clients = 5
+        n_clients = 1
         n_malicious_client = 0
         n_rounds = 1
         n_iter = 1
@@ -884,19 +883,25 @@ class TestLeakageAttack(TestClassificationFLA):
 
         target_round = 0
         target_client_idx = 0
-        target_grads = controller.get_leaked_grad(
+        target_grads = controller.get_leaked_grads(
         )[target_round][target_client_idx]
 
         # use same model to attack
         attack_model, _, _, _ = ModelFactory().create_model(self._model_json())
 
         target_shape = (1, 28, 28)
-        n_target_samples = 1
+        all_labels = []
+        for _, labels in clients[target_client_idx].train_loader:
+            all_labels.extend(labels.numpy())
+        all_labels = torch.tensor(all_labels)
+
         n_target_classes = 10
         attack = LeakageInferenceAttack(attack_model, target_shape,
                                         n_target_classes)
-        reconstructed_data = attack.reconstruct_inputs_from_grads(
-            target_grads, n_target_samples, lr=0.01, n_iter=1000)[0]
+        reconstructed_data = attack.reconstruct_inputs_from_grads(target_grads,
+                                                                  all_labels,
+                                                                  lr=0.01,
+                                                                  n_iter=1, batch_size=32)[0]
         original_data = clients[target_client_idx].train_loader.dataset[0][0]
 
         attack.visualize(original_data, reconstructed_data)
@@ -916,12 +921,16 @@ class TestLeakageAttack(TestClassificationFLA):
         attack_model, _, _, _ = ModelFactory().create_model(self._model_json())
 
         target_shape = (1, 28, 28)
-        n_target_samples = 1
+        all_labels = []
+        for _, labels in clients[target_client_idx].train_loader:
+            all_labels.extend(labels.numpy())
+        all_labels = torch.tensor(all_labels)
+
         n_target_classes = 10
         attack = LeakageInferenceAttack(attack_model, target_shape,
                                         n_target_classes)
         reconstructed_data = attack.reconstruct_inputs_from_weights(
-            target_weights, n_target_samples, lr=0.01, n_iter=1000)[0]
+            target_weights, all_labels, lr=0.01, n_iter=1, batch_size=32)[0]
         original_data = clients[target_client_idx].train_loader.dataset[0][0]
 
         attack.visualize(original_data, reconstructed_data)

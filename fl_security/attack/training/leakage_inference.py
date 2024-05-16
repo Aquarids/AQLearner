@@ -1,4 +1,5 @@
 import torch
+import torch.utils.data
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -13,26 +14,30 @@ class LeakageInferenceAttack:
 
     def reconstruct_inputs_from_grads(self,
                                       target_grads,
-                                      n_samples,
+                                      labels,
                                       lr=0.01,
-                                      n_iter=100):
+                                      n_iter=100,
+                                      batch_size=10):
+        n_samples = labels.shape[0]
         recon_data = torch.randn(n_samples,
                                  *self.input_shape,
                                  requires_grad=True)
         recon_optimizer = torch.optim.SGD([recon_data], lr=lr)
         recon_criterion = torch.nn.CrossEntropyLoss()
 
-        progress_bar = tqdm(range(n_iter), desc="Attacker reconstruct inputs")
+        dataset = torch.utils.data.TensorDataset(recon_data, labels)
+        loader = torch.utils.data.DataLoader(dataset,
+                                             batch_size=batch_size,
+                                             shuffle=True)
+
+        progress_bar = tqdm(range(n_iter * len(loader)),
+                            desc="Attacker reconstruct inputs")
+
         for _ in range(n_iter):
-            recon_optimizer.zero_grad()
-            recon_output = self.attack_model(recon_data)
-            recon_loss = torch.tensor(0,
-                                      requires_grad=True,
-                                      dtype=torch.float32)
-            for class_idx in range(self.n_classes):
-                target_class = torch.tensor([class_idx] * n_samples)
-                loss_class = recon_criterion(recon_output, target_class)
-                self.attack_model.zero_grad()
+            for recon_data, labels in loader:
+                recon_output = self.attack_model(recon_data)
+
+                loss_class = recon_criterion(recon_output, labels)
                 loss_class.backward(retain_graph=True)
 
                 grad_diff = torch.tensor(0,
@@ -41,57 +46,63 @@ class LeakageInferenceAttack:
                 attack_grads = [
                     param.grad for param in self.attack_model.parameters()
                 ]
+                self.attack_model.zero_grad()
                 for target_grad, attack_grad in zip(target_grads,
                                                     attack_grads):
-                    grad_diff = grad_diff + torch.norm(target_grad -
-                                                       attack_grad)
+                    if attack_grad is not None:
+                        grad_diff = grad_diff + torch.norm(target_grad -
+                                                           attack_grad)
+                grad_diff.backward()
 
-                recon_loss = recon_loss + grad_diff
-
-            recon_loss.backward()
-            recon_optimizer.step()
-            progress_bar.update(1)
+                recon_optimizer.step()
+                recon_optimizer.zero_grad()
+                progress_bar.update(1)
         progress_bar.close()
 
         return recon_data.detach()
 
     def reconstruct_inputs_from_weights(self,
                                         target_weights,
-                                        n_samples,
+                                        labels,
                                         lr=0.01,
-                                        n_iter=100):
+                                        n_iter=100,
+                                        batch_size=10):
+        n_samples = labels.shape[0]
         recon_data = torch.randn(n_samples,
                                  *self.input_shape,
                                  requires_grad=True)
         recon_optimizer = torch.optim.SGD([recon_data], lr=lr)
         recon_criterion = torch.nn.CrossEntropyLoss()
 
-        progress_bar = tqdm(range(n_iter), desc="Attacker reconstruct inputs")
+        dataset = torch.utils.data.TensorDataset(recon_data, labels)
+        loader = torch.utils.data.DataLoader(dataset,
+                                             batch_size=batch_size,
+                                             shuffle=True)
+
+        progress_bar = tqdm(range(n_iter * len(loader)),
+                            desc="Attacker reconstruct inputs")
+
         for _ in range(n_iter):
-            recon_optimizer.zero_grad()
-            recon_output = self.attack_model(recon_data)
-            recon_loss = torch.tensor(0,
-                                      dtype=torch.float32,
-                                      requires_grad=True)
-            for class_idx in range(self.n_classes):
-                target_class = torch.tensor([class_idx] * n_samples)
-                loss_class = recon_criterion(recon_output, target_class)
-                self.attack_model.zero_grad()
+            for recon_data, labels in loader:
+                recon_output = self.attack_model(recon_data)
+
+                loss_class = recon_criterion(recon_output, labels)
                 loss_class.backward(retain_graph=True)
 
                 weight_diff = torch.tensor(0,
                                            dtype=torch.float32,
                                            requires_grad=True)
                 attack_weights = self.attack_model.state_dict()
+                self.attack_model.zero_grad()
                 for target_key, target_weight in target_weights.items():
                     weight_diff = weight_diff + torch.norm(
                         target_weight - attack_weights[target_key])
 
-                recon_loss = recon_loss + weight_diff
+                weight_diff.backward()
 
-            recon_loss.backward()
-            recon_optimizer.step()
-            progress_bar.update(1)
+                recon_optimizer.step()
+                recon_optimizer.zero_grad()
+                progress_bar.update(1)
         progress_bar.close()
 
         return recon_data.detach()

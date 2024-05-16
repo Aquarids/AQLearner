@@ -16,7 +16,7 @@ class MaliciousFLController(FLController):
         self.leaked_weights.append(weights)
         return super().aggregate_weights(weights)
 
-    def get_leaked_grad(self):
+    def get_leaked_grads(self):
         return self.leaked_grads
 
     def get_leaked_weights(self):
