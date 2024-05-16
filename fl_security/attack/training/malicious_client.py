@@ -4,8 +4,8 @@ from tqdm import tqdm
 from fl.client import Client
 from fl.model_factory import type_multi_classification, type_binary_classification, type_regression
 
-import fla.data_poison as DataPoison
-import fla.model_poison as ModelPoison
+import fl_security.data_poison as DataPoison
+import fl_security.model_poison as ModelPoison
 
 attack_type_none = "no_attack"
 # data poison

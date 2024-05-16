@@ -2,7 +2,7 @@ import torch
 import torch.utils.data
 
 from fl.client import Client
-from fla.defend.mpc.mpc_encryptor import MPCEncryptor
+from fl_security.defend.mpc.mpc_encryptor import MPCEncryptor
 
 
 class MPCClient(Client):

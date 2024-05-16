@@ -1,7 +1,7 @@
 import torch
 
 from fl.server import Server
-from fla.defend.detection.anomaly_detection import AnomalyDetection
+from fl_security.defend.detection.anomaly_detection import AnomalyDetection
 
 
 class AnomalyDetectionServer(Server):

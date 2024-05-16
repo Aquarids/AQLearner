@@ -1,5 +1,5 @@
 from fl.controller import FLController
-from fla.defend.robust_aggr.robust_aggr_server import RobustAggrServer, type_aggr_median, type_aggr_trimmed_mean, type_aggr_krum
+from fl_security.defend.robust_aggr.robust_aggr_server import RobustAggrServer, type_aggr_median, type_aggr_trimmed_mean, type_aggr_krum
 
 
 class MedianAggrFLController(FLController):

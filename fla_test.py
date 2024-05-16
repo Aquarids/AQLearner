@@ -8,20 +8,20 @@ from fl.controller import FLController, mode_avg_grad, mode_avg_weight, mode_avg
 from fl.model_factory import ModelFactory
 from fl.model_factory import type_regression, type_binary_classification, type_multi_classification
 
-from fla.malicious_client import MaliciousClient
-from fla.malicious_client import attack_type_none, attack_sample_poison, attack_label_flip, attack_ood_data, attack_backdoor, attack_gradient_poison, attack_weight_poison
-import fla.inference_attack as InferenceAttack
-from fla.membership_inference import MembershipInferenceAttack
-from fla.defend.robust_aggr.robust_aggr_server import RobustAggrServer
-from fla.defend.robust_aggr.robust_aggr_controller import MedianAggrFLController, TrimmedMeanAggrFLController, KrumAggrFLController
-from fla.defend.detection.anomaly_detection_server import AnomalyDetectionServer
-from fla.defend.mpc.mpc_server import MPCServer
-from fla.defend.mpc.mpc_client import MPCClient
-from fla.defend.mpc.mpc_controller import MPCController
-from fla.defend.dp.dp_server import OutputPerturbationServer
-from fla.defend.dp.dp_client import InputPerturbationClient, DPSGDClient
-from fla.defend.dp.dp_controller import OutputPerturbationFLController, InputPerturbationFLController, DPSGDFLController
-from fla.defend.feature_squeeze.feature_squeeze_client import FeatureSqueezeClient
+from fl_security.malicious_client import MaliciousClient
+from fl_security.malicious_client import attack_type_none, attack_sample_poison, attack_label_flip, attack_ood_data, attack_backdoor, attack_gradient_poison, attack_weight_poison
+import fl_security.inference_attack as InferenceAttack
+from fl_security.membership_inference import MembershipInferenceAttack
+from fl_security.defend.robust_aggr.robust_aggr_server import RobustAggrServer
+from fl_security.defend.robust_aggr.robust_aggr_controller import MedianAggrFLController, TrimmedMeanAggrFLController, KrumAggrFLController
+from fl_security.defend.detection.anomaly_detection_server import AnomalyDetectionServer
+from fl_security.defend.mpc.mpc_server import MPCServer
+from fl_security.defend.mpc.mpc_client import MPCClient
+from fl_security.defend.mpc.mpc_controller import MPCController
+from fl_security.defend.dp.dp_server import OutputPerturbationServer
+from fl_security.defend.dp.dp_client import InputPerturbationClient, DPSGDClient
+from fl_security.defend.dp.dp_controller import OutputPerturbationFLController, InputPerturbationFLController, DPSGDFLController
+from fl_security.defend.feature_squeeze.feature_squeeze_client import FeatureSqueezeClient
 
 import numpy as np
 import torch

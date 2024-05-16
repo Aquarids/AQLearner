@@ -1,8 +1,8 @@
 from tqdm import tqdm
 
 from fl.controller import FLController, mode_avg_grad, mode_avg_weight, mode_avg_vote
-from fla.defend.mpc.mpc_server import MPCServer
-from fla.defend.mpc.mpc_client import MPCClient
+from fl_security.defend.mpc.mpc_server import MPCServer
+from fl_security.defend.mpc.mpc_client import MPCClient
 
 
 class MPCController(FLController):

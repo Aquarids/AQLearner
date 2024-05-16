@@ -1,7 +1,7 @@
 from fl.controller import FLController
-from fla.defend.dp.dp_server import OutputPerturbationServer
-from fla.defend.dp.dp_client import InputPerturbationClient
-from fla.defend.dp.dp_client import DPSGDClient
+from fl_security.defend.dp.dp_server import OutputPerturbationServer
+from fl_security.defend.dp.dp_client import InputPerturbationClient
+from fl_security.defend.dp.dp_client import DPSGDClient
 
 
 class OutputPerturbationFLController(FLController):

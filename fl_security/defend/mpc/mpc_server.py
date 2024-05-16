@@ -1,7 +1,7 @@
 import torch
 
 from fl.server import Server
-from fla.defend.mpc.mpc_decryptor import MPCDecryptor
+from fl_security.defend.mpc.mpc_decryptor import MPCDecryptor
 
 
 class MPCServer(Server):
