@@ -11,7 +11,11 @@ class LeakageInferenceAttack:
         self.input_shape = target_input_shape
         self.n_classes = target_n_classes
 
-    def reconstruct_inputs(self, target_grads, n_samples, lr=0.01, n_iter=100):
+    def reconstruct_inputs_from_grads(self,
+                                      target_grads,
+                                      n_samples,
+                                      lr=0.01,
+                                      n_iter=100):
         recon_data = torch.randn(n_samples,
                                  *self.input_shape,
                                  requires_grad=True)
@@ -43,6 +47,47 @@ class LeakageInferenceAttack:
                                                        attack_grad)
 
                 recon_loss = recon_loss + grad_diff
+
+            recon_loss.backward()
+            recon_optimizer.step()
+            progress_bar.update(1)
+        progress_bar.close()
+
+        return recon_data.detach()
+
+    def reconstruct_inputs_from_weights(self,
+                                        target_weights,
+                                        n_samples,
+                                        lr=0.01,
+                                        n_iter=100):
+        recon_data = torch.randn(n_samples,
+                                 *self.input_shape,
+                                 requires_grad=True)
+        recon_optimizer = torch.optim.SGD([recon_data], lr=lr)
+        recon_criterion = torch.nn.CrossEntropyLoss()
+
+        progress_bar = tqdm(range(n_iter), desc="Attacker reconstruct inputs")
+        for _ in range(n_iter):
+            recon_optimizer.zero_grad()
+            recon_output = self.attack_model(recon_data)
+            recon_loss = torch.tensor(0,
+                                      dtype=torch.float32,
+                                      requires_grad=True)
+            for class_idx in range(self.n_classes):
+                target_class = torch.tensor([class_idx] * n_samples)
+                loss_class = recon_criterion(recon_output, target_class)
+                self.attack_model.zero_grad()
+                loss_class.backward(retain_graph=True)
+
+                weight_diff = torch.tensor(0,
+                                           dtype=torch.float32,
+                                           requires_grad=True)
+                attack_weights = self.attack_model.state_dict()
+                for target_key, target_weight in target_weights.items():
+                    weight_diff = weight_diff + torch.norm(
+                        target_weight - attack_weights[target_key])
+
+                recon_loss = recon_loss + weight_diff
 
             recon_loss.backward()
             recon_optimizer.step()

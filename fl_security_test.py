@@ -895,10 +895,33 @@ class TestLeakageAttack(TestClassificationFLA):
         n_target_classes = 10
         attack = LeakageInferenceAttack(attack_model, target_shape,
                                         n_target_classes)
-        reconstructed_data = attack.reconstruct_inputs(target_grads,
-                                                       n_target_samples,
-                                                       lr=0.01,
-                                                       n_iter=10000)[0]
+        reconstructed_data = attack.reconstruct_inputs_from_grads(
+            target_grads, n_target_samples, lr=0.01, n_iter=1000)[0]
+        original_data = clients[target_client_idx].train_loader.dataset[0][0]
+
+        attack.visualize(original_data, reconstructed_data)
+
+    def test_weight_leakage_attack(self):
+        server, clients, n_rounds = self._prepare(attack_type_none)
+        controller = MaliciousFLController(server, clients)
+        controller.train(n_rounds, mode_avg_weight)
+        server.model_metric.summary()
+
+        target_round = 0
+        target_client_idx = 0
+        target_weights = controller.get_leaked_weights(
+        )[target_round][target_client_idx]
+
+        # use same model to attack
+        attack_model, _, _, _ = ModelFactory().create_model(self._model_json())
+
+        target_shape = (1, 28, 28)
+        n_target_samples = 1
+        n_target_classes = 10
+        attack = LeakageInferenceAttack(attack_model, target_shape,
+                                        n_target_classes)
+        reconstructed_data = attack.reconstruct_inputs_from_weights(
+            target_weights, n_target_samples, lr=0.01, n_iter=1000)[0]
         original_data = clients[target_client_idx].train_loader.dataset[0][0]
 
         attack.visualize(original_data, reconstructed_data)
