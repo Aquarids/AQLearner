@@ -11,6 +11,8 @@ from fl.controller import FLController, mode_avg_grad, mode_avg_weight, mode_avg
 from fl.model_factory import ModelFactory
 from fl.model_factory import type_regression, type_binary_classification, type_multi_classification
 from fl.psi import SimplePSI
+from fl.fed_prox.fed_prox_client import FedProxClient
+from fl.fed_prox.fed_prox_controller import FedProxController
 
 
 class TestModelFactory(unittest.TestCase):
@@ -74,6 +76,127 @@ class TestFL(unittest.TestCase):
                                             batch_size=1,
                                             shuffle=True))
         return train_loader_clients
+
+    def _init_dataloader(self, batch_size, regression=True):
+        if regression:
+            X, y = sklearn.datasets.fetch_california_housing(return_X_y=True)
+            scaler = sklearn.preprocessing.StandardScaler()
+            X = scaler.fit_transform(X)
+            X, y = torch.tensor(X, dtype=torch.float32), torch.tensor(
+                y, dtype=torch.float32).view(-1, 1)
+            X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
+                X, y, test_size=0.1, random_state=20)
+        else:
+            X, y = sklearn.datasets.load_breast_cancer(return_X_y=True)
+            X, y = torch.tensor(X, dtype=torch.float32), torch.tensor(
+                y, dtype=torch.float32).view(-1, 1)
+            X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
+                X, y, test_size=0.1, random_state=42)
+
+        train_loader = torch.utils.data.DataLoader(
+            torch.utils.data.TensorDataset(X_train, y_train),
+            batch_size=batch_size,
+            shuffle=True)
+        test_loader = torch.utils.data.DataLoader(
+            torch.utils.data.TensorDataset(X_test, y_test),
+            batch_size=batch_size,
+            shuffle=True)
+        return train_loader, test_loader
+
+    def _model_json(self, regression=True):
+        if regression:
+            model_json = {
+                "model_type":
+                type_regression,
+                "learning_rate":
+                0.01,
+                "optimizer":
+                "adam",
+                "criterion":
+                "mse",
+                "layers": [{
+                    "type": "linear",
+                    "in_features": 8,
+                    "out_features": 128
+                }, {
+                    "type": "relu"
+                }, {
+                    "type": "linear",
+                    "in_features": 128,
+                    "out_features": 64
+                }, {
+                    "type": "relu"
+                }, {
+                    "type": "linear",
+                    "in_features": 64,
+                    "out_features": 32
+                }, {
+                    "type": "relu"
+                }, {
+                    "type": "linear",
+                    "in_features": 32,
+                    "out_features": 1
+                }]
+            }
+        else:
+            model_json = {
+                "model_type":
+                type_binary_classification,
+                "learning_rate":
+                0.01,
+                "optimizer":
+                "adam",
+                "criterion":
+                "bce",
+                "layers": [{
+                    "type": "linear",
+                    "in_features": 30,
+                    "out_features": 16
+                }, {
+                    "type": "relu"
+                }, {
+                    "type": "linear",
+                    "in_features": 16,
+                    "out_features": 8
+                }, {
+                    "type": "relu"
+                }, {
+                    "type": "linear",
+                    "in_features": 8,
+                    "out_features": 1
+                }, {
+                    "type": "sigmoid"
+                }]
+            }
+        return model_json
+
+    def _init_clients(self, model_json, n_clients, train_loader, n_iter):
+        clients = []
+        for i in range(n_clients):
+            model, model_type, optimizer, criterion = ModelFactory(
+            ).create_model(model_json)
+            client = Client(model, criterion, optimizer, type=model_type)
+            client.setDataLoader(train_loader, n_iter)
+            clients.append(client)
+        return clients
+
+    def _init_server(self, model_json, test_loader):
+        model, model_type, optimizer, criterion = ModelFactory().create_model(
+            model_json)
+        server = Server(model, optimizer, criterion, type=model_type)
+        server.setTestLoader(test_loader)
+        return server
+
+    def _prepare(self, regression=True, batch_size=100, n_clients=5, n_iter=1):
+
+        train_loader, test_loader = self._init_dataloader(
+            batch_size, regression)
+        model_json = self._model_json(regression)
+        clients = self._init_clients(model_json, n_clients, train_loader,
+                                     n_iter)
+        server = self._init_server(model_json, test_loader)
+
+        return server, clients
 
     def test_fl_regression(self, mode):
         X, y = sklearn.datasets.fetch_california_housing(return_X_y=True)
@@ -240,6 +363,41 @@ class TestFL(unittest.TestCase):
 
     def test_avg_votes_classification(self):
         self.test_fl_classification(mode_avg_vote)
+
+
+class TestFedProx(TestFL):
+
+    def _init_clients(self, model_json, n_clients, train_loader, n_iter):
+        clients = []
+        for i in range(n_clients):
+            model, model_type, optimizer, criterion = ModelFactory(
+            ).create_model(model_json)
+            client = FedProxClient(model,
+                                   criterion,
+                                   optimizer,
+                                   type=model_type,
+                                   mu=0.1)
+            client.setDataLoader(train_loader, n_iter)
+            clients.append(client)
+        return clients
+
+    def test_fed_prox_regression(self):
+        server, clients = self._prepare(regression=True,
+                                        batch_size=100,
+                                        n_clients=5,
+                                        n_iter=1)
+        controller = FedProxController(server, clients)
+        controller.train(n_rounds=10, mode=mode_avg_weight)
+        server.model_metric.summary()
+
+    def test_fed_prox_classification(self):
+        server, clients = self._prepare(regression=False,
+                                        batch_size=16,
+                                        n_clients=5,
+                                        n_iter=1)
+        controller = FedProxController(server, clients)
+        controller.train(n_rounds=2, mode=mode_avg_weight)
+        server.model_metric.summary()
 
 
 class TestPSI(unittest.TestCase):

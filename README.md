@@ -53,7 +53,8 @@ Here is a detailed list of the contents of this project, including the correspon
 | Blockchain | Blockchain Implementation            | Simple blockchain system implementation based on the above components |
 | Federated Learning | Privacy Intersection         | Simple demonstration of privacy intersection using hashing |
 | Federated Learning | Configuration Mapping        | Implementation of JSON configuration to PyTorch model mapping |
-| Federated Learning | Federated Learning           | Simple federated learning demonstration with support for average gradients, weidghts and votes |
+| Federated Learning | FedAvg                       | Simple federated learning demonstration with support for average gradients, weidghts and votes |
+| Federated Learning | FedProx                      | Simple implementation of FedProx |
 | Federated Learning Security | Data Poison         | Simple implementation of label flipping, sample poisoning and out of distribution data increasing |
 | Federated Learning Security | Model Poison        | Simple implementation of poisoned gradients and poisoned weights |
 | Federated Learning Security | Backdoor Attack     | Simple implementation of backdoor attacking |
@@ -142,7 +143,8 @@ python -m unittest <test_file>.<test_class>.<test_method>
 | 区块链        | 区块链整体实现                  | 基于上述组件的简单区块链系统实现                    |
 | 联邦学习      | 隐私求交                       | 基于哈希的简单隐私求交示意                    |
 | 联邦学习      | 配置映射                       | 实现JSON配置到PyTorch模型的映射               |
-| 联邦学习      | 联邦学习                       | 实现简单联邦学习示意，支持梯度、权重或投票的联邦平均  |
+| 联邦学习      | 联邦平均（FedAvg）             | 实现简单联邦学习示意，支持梯度、权重或投票的联邦平均  |
+| 联邦学习      | 联邦近似（FedProx）            | 实现简单联邦近似算法  |
 | 联邦学习安全   | 数据投毒                      | 实现简单的标签反转，样本投毒和分布外数据投毒 |
 | 联邦学习安全   | 模型投毒                      | 实现简单的梯度投毒和权重投毒 |
 | 联邦学习安全   | 后门攻击                      | 实现简单的条件后门攻击 |

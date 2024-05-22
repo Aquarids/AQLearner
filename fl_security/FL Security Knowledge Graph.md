@@ -27,9 +27,6 @@
 
 #### Voting-Based Implementation
 
-- **Voting-Based Federated Learning**
-  - **summary**: This method integrates client model updates through a voting mechanism.
-  - **paper link**: [Voting-Based FL Paper](https://arxiv.org/abs/2006.04088)
 - **Federated Averaging with Voting**
   - **summary**: Combines the voting mechanism with the federated averaging algorithm to determine model updates each round.
   - **paper link**: [FedAvg with Voting Paper](https://arxiv.org/abs/2103.00102)
