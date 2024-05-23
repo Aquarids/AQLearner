@@ -13,6 +13,8 @@ from fl.model_factory import type_regression, type_binary_classification, type_m
 from fl.psi import SimplePSI
 from fl.fed_prox.fed_prox_client import FedProxClient
 from fl.fed_prox.fed_prox_controller import FedProxController
+from fl.maml.maml_client import MAMLClient
+from fl.maml.maml_controller import MAMLController
 
 
 class TestModelFactory(unittest.TestCase):
@@ -55,6 +57,15 @@ class TestModelFactory(unittest.TestCase):
 
 
 class TestFL(unittest.TestCase):
+
+    def _filter_target_loader(self, loader, target_classes):
+        new_dataset = []
+        for data, label in loader.dataset:
+            if label in target_classes:
+                new_dataset.append((data, label))
+        return torch.utils.data.DataLoader(new_dataset,
+                                           batch_size=32,
+                                           shuffle=False)
 
     def splite_data(self, X, y, n_clients):
         # the data should owned by the clinets themselves rather than the server, here just for showing the concept
@@ -397,6 +408,43 @@ class TestFedProx(TestFL):
                                         n_iter=1)
         controller = FedProxController(server, clients)
         controller.train(n_rounds=2, mode=mode_avg_weight)
+        server.model_metric.summary()
+
+
+class TestMAML(TestFL):
+
+    def _init_task(self, loader):
+        # assume we have two task, one for odd, one for even
+        tasks = []
+        odd_loader = self._filter_target_loader(loader, [1, 3, 5, 7, 9])
+        # for simplicity, we use the same loader for both train and val
+        tasks.append((odd_loader, odd_loader))
+        even_loader = self._filter_target_loader(loader, [0, 2, 4, 6, 8])
+        tasks.append((even_loader, even_loader))
+        return tasks
+
+    def _init_clients(self, model_json, n_clients, train_loader, n_iter):
+        clients = []
+        for i in range(n_clients):
+            model, model_type, optimizer, criterion = ModelFactory(
+            ).create_model(model_json)
+            client = MAMLClient(model,
+                                criterion,
+                                optimizer,
+                                inner_lr=0.01,
+                                type=model_type)
+            tasks = self._init_task(train_loader)
+            client.setDataLoader(tasks, n_iter)
+            clients.append(client)
+        return clients
+
+    def test_maml_classification(self):
+        server, clients = self._prepare(regression=False,
+                                        batch_size=16,
+                                        n_clients=5,
+                                        n_iter=10)
+        controller = MAMLController(server, clients)
+        controller.train(n_rounds=10, mode=mode_avg_weight)
         server.model_metric.summary()
 
 

@@ -55,6 +55,7 @@ Here is a detailed list of the contents of this project, including the correspon
 | Federated Learning | Configuration Mapping        | Implementation of JSON configuration to PyTorch model mapping |
 | Federated Learning | FedAvg                       | Simple federated learning demonstration with support for average gradients, weidghts and votes |
 | Federated Learning | FedProx                      | Simple implementation of FedProx |
+| Federated Learning | Fed-MAML                     | Simple implementation of Fed-MAML |
 | Federated Learning Security | Data Poison         | Simple implementation of label flipping, sample poisoning and out of distribution data increasing |
 | Federated Learning Security | Model Poison        | Simple implementation of poisoned gradients and poisoned weights |
 | Federated Learning Security | Backdoor Attack     | Simple implementation of backdoor attacking |
@@ -145,6 +146,7 @@ python -m unittest <test_file>.<test_class>.<test_method>
 | 联邦学习      | 配置映射                       | 实现JSON配置到PyTorch模型的映射               |
 | 联邦学习      | 联邦平均（FedAvg）             | 实现简单联邦学习示意，支持梯度、权重或投票的联邦平均  |
 | 联邦学习      | 联邦近似（FedProx）            | 实现简单联邦近似算法  |
+| 联邦学习      | 联邦元学习（Fed-MAML）         | 实现简单的联邦元学习算法  |
 | 联邦学习安全   | 数据投毒                      | 实现简单的标签反转，样本投毒和分布外数据投毒 |
 | 联邦学习安全   | 模型投毒                      | 实现简单的梯度投毒和权重投毒 |
 | 联邦学习安全   | 后门攻击                      | 实现简单的条件后门攻击 |
