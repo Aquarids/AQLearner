@@ -20,6 +20,8 @@ from fl.per_fed_avg.per_fed_avg_client import PerFedAvgClient
 from fl.p_fed_me.p_fed_me_client import pFedMeClient
 from fl.p_fed_me.p_fed_me_controller import pFedMeController
 from fl.p_fed_me.p_fed_me_server import pFedMeServer
+from fl.fed_em.fed_em_client import FedEMClient
+from fl.fed_em.fed_em_controller import FedEMController
 
 
 class TestModelFactory(unittest.TestCase):
@@ -508,6 +510,33 @@ class TestpFedMe(TestFL):
                                         n_iter=1)
         controller = pFedMeController(server, clients)
         controller.train(n_rounds=10, mode=mode_avg_weight)
+        server.model_metric.summary()
+
+
+class TestFedEM(TestFL):
+
+    def _init_clients(self, model_json, n_clients, train_loader, n_iter):
+        clients = []
+        for _ in range(n_clients):
+            n_models = 5  # assume each client has 5 models
+            models = []
+            _, model_type, _, criterion = ModelFactory().create_model(
+                model_json)
+            for _ in range(n_models):
+                model, _, _, _ = ModelFactory().create_model(model_json)
+                models.append(model)
+            client = FedEMClient(models, criterion, type=model_type)
+            client.setDataLoader(train_loader, n_iter)
+            clients.append(client)
+        return clients
+
+    def test_fed_em_classification(self):
+        server, clients = self._prepare(regression=False,
+                                        batch_size=16,
+                                        n_clients=5,
+                                        n_iter=1)
+        controller = FedEMController(server, clients)
+        controller.train(n_rounds=5, mode=mode_avg_vote)
         server.model_metric.summary()
 
 

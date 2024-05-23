@@ -30,8 +30,10 @@ class ModelMetric:
         self.auc = []
 
     def update(self, y_true, y_pred, y_prob, id_round):
-        y_true, y_pred, y_prob = np.array(y_true).astype(float), np.array(
-            y_pred).astype(float), np.array(y_prob)
+        y_true, y_pred = np.array(y_true).astype(float), np.array(
+            y_pred).astype(float)
+        if y_prob is not None:
+            y_prob = np.array(y_prob).astype(float)
 
         self.y_true_list.append(y_true)
         self.y_pred_list.append(y_pred)
@@ -55,7 +57,9 @@ class ModelMetric:
             self.tpr.append(tpr)
             self.fpr.append(fpr)
 
-            if y_prob is not None:
+            if y_prob is None:
+                return
+            else:
                 self.auc.append(Metrics.auc(y_true, y_prob))
 
                 cur_time = time.time()

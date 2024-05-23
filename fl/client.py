@@ -16,7 +16,7 @@ class Client:
         self.criterion = criterion
         self.optimizer = optimizer
         self.type = type
-        self.train_loaders = None
+        self.train_loader = None
 
     def setDataLoader(self, train_loader, n_iters=10):
         self.n_iters = n_iters
