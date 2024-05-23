@@ -15,6 +15,9 @@ from fl.fed_prox.fed_prox_client import FedProxClient
 from fl.fed_prox.fed_prox_controller import FedProxController
 from fl.maml.maml_client import MAMLClient
 from fl.maml.maml_controller import MAMLController
+from fl.p_fed_me.p_fed_me_client import pFedMeClient
+from fl.p_fed_me.p_fed_me_controller import pFedMeController
+from fl.p_fed_me.p_fed_me_server import pFedMeServer
 
 
 class TestModelFactory(unittest.TestCase):
@@ -444,6 +447,39 @@ class TestMAML(TestFL):
                                         n_clients=5,
                                         n_iter=10)
         controller = MAMLController(server, clients)
+        controller.train(n_rounds=10, mode=mode_avg_weight)
+        server.model_metric.summary()
+
+
+class TestpFedMe(TestFL):
+
+    def _init_clients(self, model_json, n_clients, train_loader, n_iter):
+        clients = []
+        for i in range(n_clients):
+            model, model_type, optimizer, criterion = ModelFactory(
+            ).create_model(model_json)
+            client = pFedMeClient(model,
+                                  criterion,
+                                  optimizer,
+                                  type=model_type,
+                                  beta=0.1)
+            client.setDataLoader(train_loader, n_iter)
+            clients.append(client)
+        return clients
+
+    def _init_server(self, model_json, test_loader):
+        model, model_type, optimizer, criterion = ModelFactory().create_model(
+            model_json)
+        server = pFedMeServer(model, optimizer, criterion, type=model_type)
+        server.setTestLoader(test_loader)
+        return server
+
+    def test_p_fed_me_classification(self):
+        server, clients = self._prepare(regression=False,
+                                        batch_size=16,
+                                        n_clients=5,
+                                        n_iter=1)
+        controller = pFedMeController(server, clients)
         controller.train(n_rounds=10, mode=mode_avg_weight)
         server.model_metric.summary()
 
