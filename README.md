@@ -56,6 +56,7 @@ Here is a detailed list of the contents of this project, including the correspon
 | Federated Learning | FedAvg                       | Simple federated learning demonstration with support for average gradients, weidghts and votes |
 | Federated Learning | FedProx                      | Simple implementation of FedProx |
 | Federated Learning | Fed-MAML                     | Simple implementation of Fed-MAML |
+| Federated Learning | PerFedAvg                    | Simple implementation of PerFedAvg |
 | Federated Learning | Personalized Fed with Moreau Envelopes | Simple implementation of pFedMe |
 | Federated Learning Security | Data Poison         | Simple implementation of label flipping, sample poisoning and out of distribution data increasing |
 | Federated Learning Security | Model Poison        | Simple implementation of poisoned gradients and poisoned weights |
@@ -148,6 +149,7 @@ python -m unittest <test_file>.<test_class>.<test_method>
 | 联邦学习      | 联邦平均（FedAvg）             | 实现简单联邦学习示意，支持梯度、权重或投票的联邦平均  |
 | 联邦学习      | 联邦近似（FedProx）            | 实现简单联邦近似算法  |
 | 联邦学习      | 联邦元学习（Fed-MAML）         | 实现简单的联邦元学习算法  |
+| 联邦学习      | 个性化联邦平均（PerFedAvg）     | 实现简单的个性化联邦平均算法 |
 | 联邦学习      | 基于Moreau Envelopes的个性化联邦学习 | 实现简单的pFedMe算法 |
 | 联邦学习安全   | 数据投毒                      | 实现简单的标签反转，样本投毒和分布外数据投毒 |
 | 联邦学习安全   | 模型投毒                      | 实现简单的梯度投毒和权重投毒 |
