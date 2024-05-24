@@ -17,6 +17,8 @@ from fl.maml.maml_client import MAMLClient
 from fl.maml.maml_controller import MAMLController
 from fl.per_fed_avg.per_fed_avg_controller import PerFedAvgController
 from fl.per_fed_avg.per_fed_avg_client import PerFedAvgClient
+from fl.fed_adapt_opt.fed_adapt_opt_controller import FedAdaptOptController
+from fl.fed_adapt_opt.fed_adapt_opt_server import FedAdaptOptServer, type_fed_adagrad, type_fed_yogi, type_fed_adam
 from fl.p_fed_me.p_fed_me_client import pFedMeClient
 from fl.p_fed_me.p_fed_me_controller import pFedMeController
 from fl.p_fed_me.p_fed_me_server import pFedMeServer
@@ -381,6 +383,70 @@ class TestFL(unittest.TestCase):
 
     def test_avg_votes_classification(self):
         self.test_fl_classification(mode_avg_vote)
+
+
+class TestFedAdaptOpt(TestFL):
+
+    def _init_server(self, model_json, test_loader, type_optim, lr, **kwargs):
+        model, model_type, _, _ = ModelFactory().create_model(model_json)
+        server = FedAdaptOptServer(model,
+                                   type=model_type,
+                                   type_optimizer=type_optim,
+                                   lr=lr,
+                                   **kwargs)
+        server.setTestLoader(test_loader)
+        return server
+
+    def _prepare(self, regression, batch_size, n_clients, n_iter, type_optim,
+                 lr, **kwargs):
+        train_loader, test_loader = self._init_dataloader(
+            batch_size, regression)
+        model_json = self._model_json(regression)
+        clients = self._init_clients(model_json, n_clients, train_loader,
+                                     n_iter)
+        server = self._init_server(model_json, test_loader, type_optim, lr,
+                                   **kwargs)
+        return server, clients
+
+    def test_fed_adagrad_classification(self):
+        server, clients = self._prepare(regression=False,
+                                        batch_size=16,
+                                        n_clients=5,
+                                        n_iter=1,
+                                        type_optim=type_fed_adagrad,
+                                        lr=0.01,
+                                        epsilon=1e-8)
+        controller = FedAdaptOptController(server, clients)
+        controller.train(n_rounds=10, mode=mode_avg_weight)
+        server.model_metric.summary()
+
+    def test_fed_yogi_classification(self):
+        server, clients = self._prepare(regression=False,
+                                        batch_size=16,
+                                        n_clients=5,
+                                        n_iter=1,
+                                        type_optim=type_fed_yogi,
+                                        lr=0.01,
+                                        epsilon=1e-3,
+                                        lamb=0.1,
+                                        zeta=0.1)
+        controller = FedAdaptOptController(server, clients)
+        controller.train(n_rounds=10, mode=mode_avg_weight)
+        server.model_metric.summary()
+
+    def test_fed_adam_classification(self):
+        server, clients = self._prepare(regression=False,
+                                        batch_size=16,
+                                        n_clients=5,
+                                        n_iter=1,
+                                        type_optim=type_fed_adam,
+                                        lr=0.01,
+                                        epsilon=1e-8,
+                                        beta1=0.9,
+                                        beta2=0.999)
+        controller = FedAdaptOptController(server, clients)
+        controller.train(n_rounds=10, mode=mode_avg_weight)
+        server.model_metric.summary()
 
 
 class TestFedProx(TestFL):
