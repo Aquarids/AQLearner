@@ -13,6 +13,9 @@ from fl.model_factory import type_regression, type_binary_classification, type_m
 from fl.psi import SimplePSI
 from fl.fed_prox.fed_prox_client import FedProxClient
 from fl.fed_prox.fed_prox_controller import FedProxController
+from fl.scaffold.scaffold_client import ScaffoldClient
+from fl.scaffold.scaffold_controller import ScaffoldController
+from fl.scaffold.scaffold_server import ScaffoldServer
 from fl.maml.maml_client import MAMLClient
 from fl.maml.maml_controller import MAMLController
 from fl.per_fed_avg.per_fed_avg_controller import PerFedAvgController
@@ -481,6 +484,39 @@ class TestFedProx(TestFL):
                                         n_iter=1)
         controller = FedProxController(server, clients)
         controller.train(n_rounds=2, mode=mode_avg_weight)
+        server.model_metric.summary()
+
+
+class TestScalffold(TestFL):
+
+    def _init_clients(self, model_json, n_clients, train_loader, n_iter):
+        clients = []
+        for i in range(n_clients):
+            model, model_type, optimizer, criterion = ModelFactory(
+            ).create_model(model_json)
+            client = ScaffoldClient(model,
+                                    criterion,
+                                    optimizer,
+                                    type=model_type,
+                                    c_lr=0.01)
+            client.setDataLoader(train_loader, n_iter)
+            clients.append(client)
+        return clients
+
+    def _init_server(self, model_json, test_loader):
+        model, model_type, optimizer, criterion = ModelFactory().create_model(
+            model_json)
+        server = ScaffoldServer(model, optimizer, criterion, type=model_type)
+        server.setTestLoader(test_loader)
+        return server
+
+    def test_scaffold_classification(self):
+        server, clients = self._prepare(regression=False,
+                                        batch_size=16,
+                                        n_clients=5,
+                                        n_iter=1)
+        controller = ScaffoldController(server, clients)
+        controller.train(n_rounds=10, mode=mode_avg_weight)
         server.model_metric.summary()
 
 
