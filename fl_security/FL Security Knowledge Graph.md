@@ -2,64 +2,20 @@
 
 ## 1. Federated Learning Techniques
 
-### iid
+| Algorithm | Description |
+|---|---|
+| [FedAvg](https://arxiv.org/abs/1602.05629) | Federated Averaging: Aggregates locally computed gradients from clients to update the global model. Works well for IID data. |
+| [FedProx](https://arxiv.org/abs/1812.06127) | Federated Proximal: Adds a proximal term to the loss function to tackle heterogeneity in data distributions. Works for Non-IID data. |
+| [Clustered FL](https://arxiv.org/abs/2002.06440) | Clustered Federated Learning: Groups clients into clusters with similar data distributions to improve model performance. Works for Non-IID data. |
+| [FedNova](https://arxiv.org/abs/2007.07481) | Federated Normalized Averaging: A normalization method to address heterogeneity in federated learning. Works for Non-IID data. |
+| [Federated Adaptive Optimizations](https://arxiv.org/abs/2003.00295) | Adaptive federated optimization methods (e.g., FedAdam, FedYogi, FedAdagrad) that adaptively adjust learning rates. Works for both IID and Non-IID data. |
+| [Fed-MAML](https://arxiv.org/abs/1910.03581) | Federated Model-Agnostic Meta-Learning: A meta-learning approach for federated settings. Works for both IID and Non-IID data. |
+| [PerFedAvg](https://arxiv.org/abs/2003.13461) | Personalized Federated Averaging: A personalized approach to federated learning using model agnostic meta-learning. Works for both IID and Non-IID data. |
+| [SCAFFOLD](https://arxiv.org/abs/1910.06378) | Uses control variates to reduce client drift and improve convergence. Works for Non-IID data. |
+| [Ditto](https://arxiv.org/abs/2012.04221) | Ditto: A federated learning algorithm that balances personalization and global model accuracy using regularization. Works for both IID and Non-IID data. |
+| [pFedMe](https://arxiv.org/abs/2006.08848) | Personalized Federated Learning with Moreau Envelopes: Optimizes personalized models using Moreau envelopes. Works for both IID and Non-IID data. |
+| [FedEM](https://arxiv.org/abs/2006.04088) | Federated Expectation Maximization: Combines federated learning with expectation-maximization for better convergence. Works for both IID and Non-IID data. |
 
-#### Gradient-Based Implementation
-
-- **FedAvg**
-  - **summary**: FedAvg is a commonly used federated learning algorithm that updates the global model by averaging gradients from clients.
-  - **paper link**: [FedAvg Paper](https://arxiv.org/abs/1602.05629)
-- **Adaptive Federated Optimization (FedOpt)**
-  - **summary**: FedOpt is an adaptive federated optimization algorithm that combines various optimization techniques.
-  - **paper link**: [FedOpt Paper](https://arxiv.org/abs/2003.00295)
-
-#### Weight-Based Implementation
-
-- **FedProx**
-  - **summary**: FedProx is an extension of FedAvg that introduces a regularization term to handle non-i.i.d. data.
-  - **paper link**: [FedProx Paper](https://arxiv.org/abs/1812.06127)
-- **SCAFFOLD**
-  - **summary**: SCAFFOLD reduces bias in non-i.i.d. data using control variates techniques.
-  - **paper link**: [SCAFFOLD Paper](https://arxiv.org/abs/1910.06378)
-- **FedNova**
-  - **summary**: FedNova solves the problem of non-i.i.d. data by normalizing local updates.
-  - **paper link**: [FedNova Paper](https://arxiv.org/abs/2007.07481)
-
-#### Voting-Based Implementation
-
-- **Federated Averaging with Voting**
-  - **summary**: Combines the voting mechanism with the federated averaging algorithm to determine model updates each round.
-  - **paper link**: [FedAvg with Voting Paper](https://arxiv.org/abs/2103.00102)
-- **Democratic Federated Learning**
-  - **summary**: Democratic federated learning achieves model updates through a democratic voting mechanism.
-  - **paper link**: [Democratic FL Paper](https://arxiv.org/abs/1907.06629)
-
-### non-iid
-
-- **FedAvg+**
-  - **summary**: FedAvg+ is an enhanced version of FedAvg that addresses challenges in non-i.i.d. data and improves communication efficiency.
-  - **paper link**: [FedAvg+ Paper](https://arxiv.org/abs/2003.00295)
-
-- **Clustered Federated Learning**
-  - **summary**: Clustered FL improves federated learning by clustering clients based on data similarity and training separate models for each cluster.
-  - **paper link**: [Clustered FL Paper](https://arxiv.org/abs/2006.04088)
-
-- **Per-FedAvg**
-  - **summary**: Per-FedAvg improves performance on non-i.i.d. data by personalizing models based on the global model.
-  - **paper link**: [Per-FedAvg Paper](https://arxiv.org/abs/2003.13461)
-- **Ditto**
-  - **summary**: Ditto is a personalized federated learning algorithm that uses a personalized regularization term to adapt to different client data distributions.
-  - **paper link**: [Ditto Paper](https://arxiv.org/abs/2012.04221)
-- **Personalized Federated Learning with Clustered Models**
-  - **summary**: This method achieves personalized federated learning by clustering clients.
-  - **paper link**: [Clustered Models Paper](https://arxiv.org/abs/2105.07079)
-- **pFedMe**
-  - **summary**: pFedMe combines federated learning with meta-learning to provide personalized models for each client.
-  - **paper link**: [pFedMe Paper](https://arxiv.org/abs/2006.08848)
-
-- **Federated Ensemble Learning (FedEM)**
-  - **summary**: FedEM improves federated learning performance by integrating multiple models through ensemble methods.
-  - **paper link**: [FedEM Paper](https://arxiv.org/abs/2102.04802)
 
 ## 2. Federated Learning Security
 
