@@ -13,6 +13,9 @@ from fl.model_factory import type_regression, type_binary_classification, type_m
 from fl.psi import SimplePSI
 from fl.fed_prox.fed_prox_client import FedProxClient
 from fl.fed_prox.fed_prox_controller import FedProxController
+from fl.fed_nova.fed_nova_client import FedNovaClient
+from fl.fed_nova.fed_nova_server import FedNovaServer
+from fl.fed_nova.fed_nova_controller import FedNovaController
 from fl.scaffold.scaffold_client import ScaffoldClient
 from fl.scaffold.scaffold_controller import ScaffoldController
 from fl.scaffold.scaffold_server import ScaffoldServer
@@ -484,6 +487,38 @@ class TestFedProx(TestFL):
                                         n_iter=1)
         controller = FedProxController(server, clients)
         controller.train(n_rounds=2, mode=mode_avg_weight)
+        server.model_metric.summary()
+
+
+class TestFedNova(TestFL):
+
+    def _init_clients(self, model_json, n_clients, train_loader, n_iter):
+        clients = []
+        for i in range(n_clients):
+            model, model_type, optimizer, criterion = ModelFactory(
+            ).create_model(model_json)
+            client = FedNovaClient(model,
+                                   criterion,
+                                   optimizer,
+                                   type=model_type)
+            client.setDataLoader(train_loader, n_iter)
+            clients.append(client)
+        return clients
+
+    def _init_server(self, model_json, test_loader):
+        model, model_type, optimizer, criterion = ModelFactory().create_model(
+            model_json)
+        server = FedNovaServer(model, optimizer, criterion, type=model_type)
+        server.setTestLoader(test_loader)
+        return server
+
+    def test_fed_nova_classification(self):
+        server, clients = self._prepare(regression=False,
+                                        batch_size=16,
+                                        n_clients=5,
+                                        n_iter=1)
+        controller = FedNovaController(server, clients)
+        controller.train(n_rounds=10, mode=mode_avg_weight)
         server.model_metric.summary()
 
 
