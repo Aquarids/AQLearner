@@ -1,6 +1,6 @@
 # Federated Learning Security
 
-## 1. Federated Learning Techniques
+## Federated Learning Techniques
 
 | Algorithm | Description |
 |---|---|
@@ -16,38 +16,24 @@
 | [pFedMe](https://arxiv.org/abs/2006.08848) | Personalized Federated Learning with Moreau Envelopes: Optimizes personalized models using Moreau envelopes. Works for both IID and Non-IID data. |
 | [FedEM](https://arxiv.org/abs/2006.04088) | Federated Expectation Maximization: Combines federated learning with expectation-maximization for better convergence. Works for both IID and Non-IID data. |
 
+## Cryptographic Techniques
 
-## 2. Federated Learning Security
+| Name | Description |
+|------|-------------|
+| [Homomorphic Encryption (HE)](https://arxiv.org/abs/1202.3374) | Homomorphic Encryption allows computations on ciphertexts, ensuring the results are encrypted. It supports applications like secure multi-party computation and encrypted mail filtering. |
+| [Zero-Knowledge Proof](https://arxiv.org/abs/1304.2970) | Zero-Knowledge Proofs enable one party to prove the validity of a statement without revealing any information beyond the truth of the statement. These are crucial for privacy-preserving cryptographic protocols. |
+| [Secret Sharing](https://arxiv.org/abs/1711.09834) | Secret Sharing splits a secret into parts distributed among participants such that only specific subsets can reconstruct the secret, enhancing data security and fault tolerance. |
+| [Garbled Circuit](https://arxiv.org/abs/2003.10070) | Garbled Circuits allow secure computation by encrypting circuit gates, enabling secure two-party computation without revealing inputs. This is fundamental for secure function evaluation. |
+| [Oblivious Transfer (OT)](https://arxiv.org/abs/1509.07132) | Oblivious Transfer is a fundamental protocol in cryptography where a sender transfers one of potentially many pieces of information to a receiver, but remains oblivious to what information and whether it has been transferred. |
+| [Multi-Party Computation (MPC)](https://arxiv.org/abs/2002.05645) | MPC allows multiple parties to jointly compute a function over their inputs while keeping those inputs private. This is essential for collaborative computations without revealing individual data. |
+| [Verifiable Secret Sharing](https://arxiv.org/abs/1802.07751) | Verifiable Secret Sharing ensures that the secret shares distributed can be checked for integrity, preventing any fraudulent distribution by the dealer. |
+| [Quantum Key Distribution (QKD)](https://arxiv.org/abs/1703.09796) | QKD uses principles of quantum mechanics to securely distribute encryption keys, ensuring that any eavesdropping attempts can be detected. |
+| [Attribute-Based Encryption (ABE)](https://arxiv.org/abs/1805.05633) | ABE is a type of public-key encryption where decryption is possible only if the user possesses a certain set of attributes, enhancing access control. |
+| [Functional Encryption](https://arxiv.org/abs/1705.01848) | Functional Encryption allows decrypting only specific functions of the encrypted data, providing more fine-grained control over what information is accessible. |
 
-### Cryptographic Techniques
+## Federated Learning Attacks
 
-#### MPC
-
-- **Homomorphic Encryption (HE)**
-  - **summary**: Homomorphic encryption allows computations to be performed directly on encrypted data, ensuring data privacy.
-  - **paper link**: [HE Paper](https://link.springer.com/article/10.1007/s00145-015-9205-2)
-- **Zero-Knowledge Proofs (ZKP)**
-  - **summary**: Zero-knowledge proofs allow one party to prove possession of certain information without revealing the information itself.
-  - **paper link**: [ZKP Paper](https://ieeexplore.ieee.org/document/841861)
-- **Secret Sharing**
-  - **summary**: Secret sharing protects privacy by dividing secret data into multiple parts.
-  - **paper link**: [Secret Sharing Paper](https://dl.acm.org/doi/10.1145/359340.359342)
-
-#### Secure Multi-Party Computation (SMC)
-
-- **Yao's Garbled Circuits**
-  - **summary**: Yao's garbled circuits are a classic method for implementing secure multi-party computation.
-  - **paper link**: [Garbled Circuits Paper](https://dl.acm.org/doi/10.1145/28395.28420)
-- **Oblivious Transfer**
-  - **summary**: Oblivious transfer is a technique that ensures secure data transmission.
-  - **paper link**: [Oblivious Transfer Paper](https://link.springer.com/article/10.1007/BF00196742)
-- **Secure Function Evaluation**
-  - **summary**: Secure function evaluation is a method for securely computing functions among multiple parties.
-  - **paper link**: [SFE Paper](https://link.springer.com/article/10.1007/s00145-002-0206-4)
-
-### Federated Learning Attacks
-
-#### Data Poisoning
+### Data Poisoning
 
 - **Training Stage Poisoning**
   - **Label Flip**
@@ -60,14 +46,14 @@
     - **summary**: Backdoor attacks plant triggers in the training data to implant backdoors in the model.
     - **paper link**: [Backdoor Attack Paper](https://arxiv.org/abs/1708.06733)
 
-#### Model Poisoning
+### Model Poisoning
 
 - **summary**: Model poisoning attacks compromise the global model by uploading malicious model updates.
 - **paper link**: [Model Poisoning Paper](https://dl.acm.org/doi/10.1145/3383313.3383315)
 - **summary**: Model poisoning can also be achieved by introducing malicious weights into the model.
 - **paper link**: [Model Poisoning Weights Paper](https://dl.acm.org/doi/10.1145/3319535.3363221)
 
-#### Inference Attacks
+### Inference Attacks
 
 - **Training Stage Attacks**
   - **Gradient-Based**
@@ -102,9 +88,9 @@
       - **summary**: Black-box inference attacks infer characteristics of training data by analyzing only the model outputs.
       - **paper link**: [Black-Box Inference Paper](https://arxiv.org/abs/1905.05113)
 
-### Federated Learning Defenses
+## Federated Learning Defenses
 
-#### Based on Secure Multi-Party Computation
+### Based on Secure Multi-Party Computation
 
 - **Homomorphic Encryption**
   - **summary**: Methods based on homomorphic encryption protect privacy by allowing computations on encrypted data.
@@ -136,7 +122,7 @@
     - **summary**: Enhancing efficiency of secret sharing in federated learning.
     - **paper link**: [Efficient Secret Sharing Paper](https://arxiv.org/abs/2008.08489)
 
-#### Based on Robust Aggregation
+### Based on Robust Aggregation
 
 - **summary**: Methods based on robust aggregation use robust aggregation algorithms to resist malicious data interference.
 - **paper link**: [Robust Aggregation Defense Paper](https://dl.acm.org/doi/10.1145/3394486.3403360)
@@ -147,7 +133,7 @@
   - **summary**: The Krum algorithm enhances robustness of aggregation by selecting trusted updates.
   - **paper link**: [Krum Paper](https://dl.acm.org/doi/10.1145/3052973.3053006)
 
-#### Based on Adversarial Training
+### Based on Adversarial Training
 
 - **summary**: Methods based on adversarial training enhance model robustness by generating adversarial examples to defend against adversarial attacks.
 - **paper link**: [Adversarial Training Defense Paper](https://arxiv.org/abs/1705.07204)
@@ -158,7 +144,7 @@
   - **summary**: Improving model robustness in federated learning through adversarial training.
   - **paper link**: [Improving Robustness Paper](https://dl.acm.org/doi/10.1145/3351099.3351101)
 
-#### Based on Defense Mechanism Enhancement
+### Based on Defense Mechanism Enhancement
 
 - **summary**: Methods based on defense mechanism enhancement protect federated learning security by combining multiple defense techniques.
 - **paper link**: [Defense Mechanism Enhancement Paper](https://arxiv.org/abs/2103.09328)
