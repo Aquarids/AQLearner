@@ -1,3 +1,4 @@
+import torch.utils.data.dataloader
 from dl.simple_cnn_classifier import SimpleCNNClassifier
 from dl.simple_logistic_regression import SimpleLogisticRegression
 import dl.metrics as Metrics
@@ -11,7 +12,7 @@ from fl.model_factory import type_regression, type_binary_classification, type_m
 from fl_security.attack.training.malicious_controller import MaliciousFLController
 from fl_security.attack.training.malicious_client import MaliciousClient
 from fl_security.attack.training.malicious_client import attack_type_none, attack_sample_poison, attack_label_flip, attack_ood_data, attack_backdoor, attack_gradient_poison, attack_weight_poison
-from fl_security.attack.training.leakage_inference import LeakageInferenceAttack
+from fl_security.attack.training.dlg import DLG
 import fl_security.attack.inference.common_inference as InferenceAttack
 from fl_security.attack.inference.membership_inference import MembershipInferenceAttack
 from fl_security.defend.robust_aggr.robust_aggr_server import RobustAggrServer
@@ -35,6 +36,7 @@ from sklearn.preprocessing import StandardScaler
 import random
 import unittest
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 class TestDataPoison(unittest.TestCase):
@@ -265,6 +267,8 @@ class TestMembershipInferenceAttack(unittest.TestCase):
         attack_accuracy = attacker.attack(member_loader, non_member_loader, 10,
                                           0.8)
         print("Membership Inference Attack Accuracy: ", attack_accuracy)
+
+
 
 
 class TestClassificationFLA(unittest.TestCase):
@@ -875,62 +879,93 @@ class TestLeakageAttack(TestClassificationFLA):
 
         return server, clients, n_rounds
 
-    def test_grad_leakage_attack(self):
-        server, clients, n_rounds = self._prepare(attack_type_none)
-        controller = MaliciousFLController(server, clients)
-        controller.train(n_rounds, mode_avg_grad)
-        server.model_metric.summary()
+    class MNISTNet(torch.nn.Module):
+        def __init__(self):
+            super(TestLeakageAttack.MNISTNet, self).__init__()
+            self.conv1 = torch.nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
+            self.conv2 = torch.nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+            self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+            self.fc1 = torch.nn.Linear(64 * 7 * 7, 128)
+            self.fc2 = torch.nn.Linear(128, 10)
 
-        target_round = 0
-        target_client_idx = 0
-        target_grads = controller.get_leaked_grads(
-        )[target_round][target_client_idx]
+        def forward(self, x):
+            x = self.pool(torch.relu(self.conv1(x)))
+            x = self.pool(torch.relu(self.conv2(x)))
+            x = x.view(-1, 64 * 7 * 7)
+            x = torch.relu(self.fc1(x))
+            x = self.fc2(x)
+            return x
 
-        # use same model to attack
-        attack_model, _, _, _ = ModelFactory().create_model(self._model_json())
+        def fit(self, loader, learning_rate, n_iters):
+            optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
+            criterion = torch.nn.CrossEntropyLoss()
+
+            progress_bar = tqdm(range(n_iters * len(loader)), desc="Training")
+            for _ in range(n_iters):
+                for X, y in loader:
+                    optimizer.zero_grad()
+                    output = self(X)
+                    loss = criterion(output, y)
+                    loss.backward()
+                    optimizer.step()
+                    progress_bar.update(1)
+
+        def train_once(self, X, y, learning_rate=0.01):
+            optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
+            criterion = torch.nn.CrossEntropyLoss()
+
+            optimizer.zero_grad()
+            output = self(X)
+            loss = criterion(output, y)
+            grads = torch.autograd.grad(loss, self.parameters())
+            # loss.backward()
+            # optimizer.step()
+            return grads, output
+                
+
+    def test_dlg(self):
+        
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((28, 28)),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.5, ), (0.5, ))
+        ])
+
+        train_dataset = torchvision.datasets.MNIST(root='./data',
+                                                   train=True,
+                                                   download=True,
+                                                   transform=transform)
+        test_dataset = torchvision.datasets.MNIST(root='./data',
+                                                  train=False,
+                                                  download=True,
+                                                  transform=transform)
+        train_loader = torch.utils.data.dataloader.DataLoader(train_dataset,
+                                                                batch_size=1,
+                                                                shuffle=True)
+        test_loader = torch.utils.data.dataloader.DataLoader(test_dataset,
+                                                                batch_size=1,
+                                                                shuffle=False)
+
+        test_image = test_dataset[0][0]
+        test_label = torch.tensor([test_dataset[0][1]], dtype=torch.long)
+
+        np.random.seed(0)
+        torch.manual_seed(0)
+
+        target_model = self.MNISTNet()
+        target_model.fit(train_loader, learning_rate=0.01, n_iters=1)
+        initial_params = target_model.state_dict()
+
+        shadow_model = self.MNISTNet()
+        shadow_model.load_state_dict(initial_params)
 
         target_shape = (1, 28, 28)
-        all_labels = []
-        for _, labels in clients[target_client_idx].train_loader:
-            all_labels.extend(labels.numpy())
-        all_labels = torch.tensor(all_labels)
-
         n_target_classes = 10
-        attack = LeakageInferenceAttack(attack_model, target_shape,
-                                        n_target_classes)
-        reconstructed_data = attack.reconstruct_inputs_from_grads(target_grads,
-                                                                  all_labels,
-                                                                  lr=0.01,
-                                                                  n_iter=1, batch_size=32)[0]
-        original_data = clients[target_client_idx].train_loader.dataset[0][0]
+        attacker = DLG(shadow_model, target_shape, n_target_classes)
 
-        attack.visualize(original_data, reconstructed_data)
+        target_grads, _ = shadow_model.train_once(test_image, test_label)
 
-    def test_weight_leakage_attack(self):
-        server, clients, n_rounds = self._prepare(attack_type_none)
-        controller = MaliciousFLController(server, clients)
-        controller.train(n_rounds, mode_avg_weight)
-        server.model_metric.summary()
-
-        target_round = 0
-        target_client_idx = 0
-        target_weights = controller.get_leaked_weights(
-        )[target_round][target_client_idx]
-
-        # use same model to attack
-        attack_model, _, _, _ = ModelFactory().create_model(self._model_json())
-
-        target_shape = (1, 28, 28)
-        all_labels = []
-        for _, labels in clients[target_client_idx].train_loader:
-            all_labels.extend(labels.numpy())
-        all_labels = torch.tensor(all_labels)
-
-        n_target_classes = 10
-        attack = LeakageInferenceAttack(attack_model, target_shape,
-                                        n_target_classes)
-        reconstructed_data = attack.reconstruct_inputs_from_weights(
-            target_weights, all_labels, lr=0.01, n_iter=1, batch_size=32)[0]
-        original_data = clients[target_client_idx].train_loader.dataset[0][0]
-
-        attack.visualize(original_data, reconstructed_data)
+        reconstructed_data = attacker.reconstruct_inputs_from_grads(target_grads,
+                                                                    lr=0.01,
+                                                                    n_iter=10000)[0]
+        attacker.visualize_simple(test_image, reconstructed_data[0])

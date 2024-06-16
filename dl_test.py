@@ -654,5 +654,60 @@ class TestDiffusion(unittest.TestCase):
             reconstructed_data.view(1, 28, 28).detach(), 'Reconstructed Image')
 
 
+import os
+from PIL import Image
+from tqdm import tqdm
+
+class DownloadImage(unittest.TestCase):
+
+
+    def downloadMNIST(self, save_path, save_rules, train=True):
+        transform = torchvision.transforms.Compose(
+            [torchvision.transforms.ToTensor()])
+
+        # Download the MNIST dataset
+        if train:
+            mnist_data = torchvision.datasets.MNIST(root='./data',
+                                                    train=True,
+                                                    download=True,
+                                                    transform=transform)
+        else:
+            mnist_data = torchvision.datasets.MNIST(root='./data',
+                                                    train=False,
+                                                    download=True,
+                                                    transform=transform)
+
+        # Specify the directory to save the images
+        save_dir = save_path
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        toPil = torchvision.transforms.ToPILImage()
+    
+        # Save images
+        for label in save_rules:
+            folder_name = os.path.join(save_dir, save_rules[label])
+            if not os.path.exists(folder_name):
+                os.makedirs(folder_name)
+
+        progress_bar = tqdm(total=len(mnist_data))
+        for idx, (image, label) in enumerate(mnist_data):
+            folder_name = save_rules[label]
+            img = toPil(image)
+            img.save(os.path.join(save_dir, folder_name, f"{idx}.png"))
+            progress_bar.update(1)
+        progress_bar.close()
+
+
+    def test_download_mnist(self):
+        path = "./data/mnist_images"
+        label_rules = {
+            0: 'zero', 1: 'one', 2: 'two', 3: 'three', 4: 'four',
+            5: 'five', 6: 'six', 7: 'seven', 8: 'eight', 9: 'nine'
+        }
+        self.downloadMNIST(path, label_rules, True)
+        print("Images have been saved to", path)
+
+
 if __name__ == '__main__':
     unittest.main()
