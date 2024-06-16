@@ -269,8 +269,6 @@ class TestMembershipInferenceAttack(unittest.TestCase):
         print("Membership Inference Attack Accuracy: ", attack_accuracy)
 
 
-
-
 class TestClassificationFLA(unittest.TestCase):
 
     def _init_clients(self, n_clients, n_malicious_client, model_factory_json,
@@ -859,113 +857,27 @@ class TestDP(TestSampleInference):
               target_result == False)
 
 
-class TestLeakageAttack(TestClassificationFLA):
-
-    def _prepare(self, attack_type):
-        train_loader, test_loader = self._init_dataloader()
-
-        n_clients = 1
-        n_malicious_client = 0
-        n_rounds = 1
-        n_iter = 1
-
-        clients = self._init_clients(n_clients, n_malicious_client,
-                                     self._model_json(), attack_type)
-        server = self._init_server(self._model_json())
-
-        for i in range(n_clients):
-            clients[i].setDataLoader(train_loader, n_iter)
-        server.setTestLoader(test_loader)
-
-        return server, clients, n_rounds
-
-    class MNISTNet(torch.nn.Module):
-        def __init__(self):
-            super(TestLeakageAttack.MNISTNet, self).__init__()
-            self.conv1 = torch.nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
-            self.conv2 = torch.nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
-            self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-            self.fc1 = torch.nn.Linear(64 * 7 * 7, 128)
-            self.fc2 = torch.nn.Linear(128, 10)
-
-        def forward(self, x):
-            x = self.pool(torch.relu(self.conv1(x)))
-            x = self.pool(torch.relu(self.conv2(x)))
-            x = x.view(-1, 64 * 7 * 7)
-            x = torch.relu(self.fc1(x))
-            x = self.fc2(x)
-            return x
-
-        def fit(self, loader, learning_rate, n_iters):
-            optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
-            criterion = torch.nn.CrossEntropyLoss()
-
-            progress_bar = tqdm(range(n_iters * len(loader)), desc="Training")
-            for _ in range(n_iters):
-                for X, y in loader:
-                    optimizer.zero_grad()
-                    output = self(X)
-                    loss = criterion(output, y)
-                    loss.backward()
-                    optimizer.step()
-                    progress_bar.update(1)
-
-        def train_once(self, X, y, learning_rate=0.01):
-            optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
-            criterion = torch.nn.CrossEntropyLoss()
-
-            optimizer.zero_grad()
-            output = self(X)
-            loss = criterion(output, y)
-            grads = torch.autograd.grad(loss, self.parameters())
-            # loss.backward()
-            # optimizer.step()
-            return grads, output
-                
+class TestLeakageAttack(unittest.TestCase):   
 
     def test_dlg(self):
-        
+
         transform = torchvision.transforms.Compose([
-            torchvision.transforms.Resize((28, 28)),
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize((0.5, ), (0.5, ))
         ])
+        datasets = torchvision.datasets.CIFAR100(root="./data", download=True, train=False, transform=transform)
 
-        train_dataset = torchvision.datasets.MNIST(root='./data',
-                                                   train=True,
-                                                   download=True,
-                                                   transform=transform)
-        test_dataset = torchvision.datasets.MNIST(root='./data',
-                                                  train=False,
-                                                  download=True,
-                                                  transform=transform)
-        train_loader = torch.utils.data.dataloader.DataLoader(train_dataset,
-                                                                batch_size=1,
-                                                                shuffle=True)
-        test_loader = torch.utils.data.dataloader.DataLoader(test_dataset,
-                                                                batch_size=1,
-                                                                shuffle=False)
+        test_image = datasets[0][0]
+        test_label = torch.tensor([datasets[0][1]], dtype=torch.long)
 
-        test_image = test_dataset[0][0]
-        test_label = torch.tensor([test_dataset[0][1]], dtype=torch.long)
+        onehot_test_label = DLG.Utils.label_to_onehot(test_label, num_classes=100)
 
-        np.random.seed(0)
-        torch.manual_seed(0)
+        np.random.seed(1234)
+        torch.manual_seed(1234)
 
-        target_model = self.MNISTNet()
-        target_model.fit(train_loader, learning_rate=0.01, n_iters=1)
-        initial_params = target_model.state_dict()
+        target_model = DLG.LeNet()
+        leaked_grads = target_model.leak_grads(test_image.unsqueeze(0), onehot_test_label.unsqueeze(0))
 
-        shadow_model = self.MNISTNet()
-        shadow_model.load_state_dict(initial_params)
+        attacker = DLG(target_model, (3, 32, 32), 100)
+        reconstructed_data = attacker.reconstruct_inputs_from_grads(leaked_grads, n_iter=1000)
 
-        target_shape = (1, 28, 28)
-        n_target_classes = 10
-        attacker = DLG(shadow_model, target_shape, n_target_classes)
-
-        target_grads, _ = shadow_model.train_once(test_image, test_label)
-
-        reconstructed_data = attacker.reconstruct_inputs_from_grads(target_grads,
-                                                                    lr=0.01,
-                                                                    n_iter=10000)[0]
-        attacker.visualize_simple(test_image, reconstructed_data[0])
+        attacker.visualize(test_image, reconstructed_data[0])
