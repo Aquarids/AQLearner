@@ -44,7 +44,6 @@ class DLG:
                 torch.nn.Linear(768, 100)
             )
 
-            
         def forward(self, x):
             out = self.body(x)
             out = out.view(out.size(0), -1)

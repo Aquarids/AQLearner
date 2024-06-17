@@ -13,6 +13,7 @@ from fl_security.attack.training.malicious_controller import MaliciousFLControll
 from fl_security.attack.training.malicious_client import MaliciousClient
 from fl_security.attack.training.malicious_client import attack_type_none, attack_sample_poison, attack_label_flip, attack_ood_data, attack_backdoor, attack_gradient_poison, attack_weight_poison
 from fl_security.attack.training.dlg import DLG
+from fl_security.attack.training.idlg import iDLG
 import fl_security.attack.inference.common_inference as InferenceAttack
 from fl_security.attack.inference.membership_inference import MembershipInferenceAttack
 from fl_security.defend.robust_aggr.robust_aggr_server import RobustAggrServer
@@ -859,7 +860,7 @@ class TestDP(TestSampleInference):
 
 class TestLeakageAttack(unittest.TestCase):   
 
-    def test_dlg(self):
+    def test_DLG(self):
 
         transform = torchvision.transforms.Compose([
             torchvision.transforms.Resize(32),
@@ -885,3 +886,32 @@ class TestLeakageAttack(unittest.TestCase):
         random_data, reconstructed_data = attacker.reconstruct_inputs_from_grads(leaked_grads, n_iter=1000)
 
         attacker.visualize(test_image[0], random_data[0], reconstructed_data[0])
+
+    def test_iDLG(self):
+
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize(32),
+            torchvision.transforms.CenterCrop(32),
+            torchvision.transforms.ToTensor(),
+        ])
+        datasets = torchvision.datasets.CIFAR100(root="./data", download=True, train=False, transform=transform)
+
+        test_image = datasets[25][0].view(1, 3, 32, 32)
+        test_label = torch.tensor([datasets[25][1]], dtype=torch.long).view(1, )
+
+        print("Original label: ", test_label.item())
+
+        np.random.seed(0)
+        torch.manual_seed(0)
+
+        target_model = iDLG.LeNet()
+        # still need to apply weights init
+        target_model.apply(DLG.Utils.weights_init)
+        leaked_grads = target_model.leak_grads(test_image, test_label)
+
+        attacker = iDLG(target_model, (3, 32, 32), 100)
+        random_data, reconstructed_data = attacker.reconstruct_inputs_from_grads(leaked_grads, n_iter=1000, lr=0.01)
+
+        attacker.visualize(test_image[0], random_data[0], reconstructed_data[0])
+
+    
