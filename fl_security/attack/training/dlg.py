@@ -37,12 +37,13 @@ class DLG:
                 act(),
                 torch.nn.Conv2d(12, 12, kernel_size=5, padding=5//2, stride=1),
                 act(),
+                torch.nn.Conv2d(12, 12, kernel_size=5, padding=5//2, stride=1),
+                act(),
             )
             self.fc = torch.nn.Sequential(
                 torch.nn.Linear(768, 100)
             )
 
-            # self.apply(DLG.Utils.weights_init)
             
         def forward(self, x):
             out = self.body(x)
@@ -58,18 +59,18 @@ class DLG:
 
 
     def __init__(self, target_model, input_shape, n_classes):
-        self.shadow_model = DLG.LeNet()
-        self.shadow_model.load_state_dict(target_model.state_dict())
+        self.shadow_model = target_model
         self.input_shape = input_shape
         self.n_classes = n_classes
 
     def reconstruct_inputs_from_grads(self,
                                       target_grads,
-                                      lr=0.01,
+                                      lr=1,
                                       n_iter=100):
         recon_data = torch.randn(1,
                                  *self.input_shape,
                                  requires_grad=True)
+        random_data = recon_data.detach().clone()
         recon_label = torch.randn(1, self.n_classes, requires_grad=True)
 
         recon_optimizer = torch.optim.LBFGS([recon_data, recon_label], lr=lr)
@@ -78,6 +79,7 @@ class DLG:
         progress_bar = tqdm(range(n_iter), desc="Attacker reconstruct inputs")
         def closure():
             recon_optimizer.zero_grad()
+
             recon_output = self.shadow_model(recon_data)
             onehot_recon_label = torch.nn.functional.softmax(recon_label, dim=-1)
 
@@ -87,7 +89,6 @@ class DLG:
             grad_diff = 0
             for target_grad, attack_grad in zip(target_grads, recon_grad):
                 grad_diff += ((target_grad - attack_grad) ** 2).sum()
-
             grad_diff.backward()
 
             progress_bar.set_postfix(loss=grad_diff.item())
@@ -98,15 +99,22 @@ class DLG:
             progress_bar.update(1)
                     
         progress_bar.close()
+        
+        print(f"recon label: {torch.argmax(recon_label).item()}")
 
-        return recon_data.detach()
+        return random_data, recon_data.detach()
 
-    def visualize(self, original_data, reconstructed_data):
-        fig, ax = plt.subplots(1, 2)
+    def is_same(data1, data2):
+        return (data1 == data2).all()
+
+    def visualize(self, original_data, random_data, reconstructed_data):
+        fig, ax = plt.subplots(1, 3, figsize=(12, 4))
         to_pil_image = torchvision.transforms.ToPILImage()
 
         ax[0].imshow(to_pil_image(original_data))
         ax[0].set_title('Original')
-        ax[1].imshow(to_pil_image(reconstructed_data))
-        ax[1].set_title('Reconstructed')
+        ax[1].imshow(to_pil_image(random_data))
+        ax[1].set_title('Random')
+        ax[2].imshow(to_pil_image(reconstructed_data))
+        ax[2].set_title('Reconstructed')
         plt.show()

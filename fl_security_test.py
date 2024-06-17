@@ -862,22 +862,26 @@ class TestLeakageAttack(unittest.TestCase):
     def test_dlg(self):
 
         transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize(32),
+            torchvision.transforms.CenterCrop(32),
             torchvision.transforms.ToTensor(),
         ])
         datasets = torchvision.datasets.CIFAR100(root="./data", download=True, train=False, transform=transform)
 
-        test_image = datasets[0][0]
-        test_label = torch.tensor([datasets[0][1]], dtype=torch.long)
+        test_image = datasets[25][0].view(1, 3, 32, 32)
+        test_label = torch.tensor([datasets[25][1]], dtype=torch.long).view(1, )
 
         onehot_test_label = DLG.Utils.label_to_onehot(test_label, num_classes=100)
+        print("Original label: ", torch.argmax(onehot_test_label, dim=-1).item())
 
-        np.random.seed(1234)
-        torch.manual_seed(1234)
+        np.random.seed(0)
+        torch.manual_seed(0)
 
         target_model = DLG.LeNet()
-        leaked_grads = target_model.leak_grads(test_image.unsqueeze(0), onehot_test_label.unsqueeze(0))
+        target_model.apply(DLG.Utils.weights_init)
+        leaked_grads = target_model.leak_grads(test_image, onehot_test_label)
 
         attacker = DLG(target_model, (3, 32, 32), 100)
-        reconstructed_data = attacker.reconstruct_inputs_from_grads(leaked_grads, n_iter=1000)
+        random_data, reconstructed_data = attacker.reconstruct_inputs_from_grads(leaked_grads, n_iter=1000)
 
-        attacker.visualize(test_image, reconstructed_data[0])
+        attacker.visualize(test_image[0], random_data[0], reconstructed_data[0])
