@@ -4,6 +4,7 @@ import os
 
 
 def accuracy(y_test, y_pred):
+    y_test, y_pred = np.array(y_test), np.array(y_pred)
     return np.sum(y_test == y_pred) / len(y_test)
 
 

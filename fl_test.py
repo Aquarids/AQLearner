@@ -1,10 +1,14 @@
 import torch
+import torchvision
 import torch.utils.data
 import unittest
 import sklearn.datasets
 import sklearn.model_selection
 import sklearn.preprocessing
+import random
+import numpy as np
 
+from dl.simple_cnn_classifier import SimpleCNNClassifier
 from fl.client import Client
 from fl.server import Server
 from fl.controller import FLController, mode_avg_grad, mode_avg_weight, mode_avg_vote
@@ -307,6 +311,11 @@ class TestFL(unittest.TestCase):
         X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
             X, y, test_size=0.1, random_state=42)
 
+        np.random.seed(0)
+        torch.manual_seed(0)
+        random.seed(0)
+
+
         model_json = {
             "model_type":
             type_binary_classification,
@@ -339,7 +348,7 @@ class TestFL(unittest.TestCase):
         model, model_type, optimizer, criterion = ModelFactory().create_model(
             model_json)
 
-        n_clients = 10
+        n_clients = 2
         clients = []
         for i in range(n_clients):
             # each client should have its own model
@@ -352,9 +361,9 @@ class TestFL(unittest.TestCase):
             model_json)
         server = Server(model, optimizer, criterion, type=model_type)
 
-        n_rounds = 10
-        n_batch_size = 16
-        n_iter = 10
+        n_rounds = 1
+        n_batch_size = 10
+        n_iter = 100
 
         train_loader_clients = self.splite_data(X_train, y_train, n_clients)
         for client_id in range(n_clients):
@@ -369,6 +378,114 @@ class TestFL(unittest.TestCase):
 
         controller = FLController(server, clients)
         controller.train(n_rounds, mode)
+
+        server.model_metric.summary()
+
+    def test_mnist_fl_classification(self):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((28, 28)),
+            torchvision.transforms.ToTensor(),
+        ])
+
+        train_dataset = torchvision.datasets.MNIST(root='./data',
+                                                   train=True,
+                                                   download=True,
+                                                   transform=transform)
+        test_dataset = torchvision.datasets.MNIST(root='./data',
+                                                  train=False,
+                                                  download=True,
+                                                  transform=transform)
+
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=32,
+                                                   shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset,
+                                                  batch_size=32,
+                                                  shuffle=False)
+
+        model_json = {
+            "model_type":
+            type_multi_classification,
+            "learning_rate":
+            0.01,
+            "optimizer":
+            "adam",
+            "criterion":
+            "cross_entropy",
+            "layers": [{
+                "type": "conv2d",
+                "in_channels": 1,
+                "out_channels": 32,
+                "kernel_size": 3,
+                "padding": 1,
+                "stride": 1
+            }, {
+                "type": "relu"
+            }, {
+                "type": "maxpool",
+                "kernel_size": 2,
+                "stride": 2,
+                "padding": 0
+            }, {
+                "type": "conv2d",
+                "in_channels": 32,
+                "out_channels": 64,
+                "kernel_size": 3,
+                "padding": 1,
+                "stride": 1
+            }, {
+                "type": "relu"
+            }, {
+                "type": "maxpool",
+                "kernel_size": 2,
+                "stride": 2,
+                "padding": 0
+            }, {
+                "type": "reshape",
+                "shape": [-1, 64 * 7 * 7]
+            }, {
+                "type": "linear",
+                "in_features": 7 * 7 * 64,
+                "out_features": 128
+            }, {
+                "type": "linear",
+                "in_features": 128,
+                "out_features": 10
+            }, {
+                "type": "softmax",
+                "dim": 1
+            }]
+        }
+
+        np.random.seed(0)
+        torch.manual_seed(0)
+        random.seed(0)
+
+        n_clients = 1
+        clients = []
+        for i in range(n_clients):
+            # each client should have its own model
+            model, model_type, optimizer, criterion = ModelFactory(
+            ).create_model(model_json)
+            model = SimpleCNNClassifier()
+            client = Client(model, criterion, optimizer, type=model_type)
+            clients.append(client)
+
+        model, model_type, optimizer, criterion = ModelFactory().create_model(
+            model_json)
+        model = SimpleCNNClassifier()
+        server = Server(model, optimizer, criterion, type=model_type)
+
+        n_rounds = 1
+        n_iter = 1
+
+        for client_id in range(n_clients):
+            clients[client_id].setDataLoader(train_loader, n_iter)
+
+        server.setTestLoader(test_loader)
+
+        controller = FLController(server, clients)
+        controller.train(n_rounds, mode_avg_grad)
 
         server.model_metric.summary()
 

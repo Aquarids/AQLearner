@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+import random
 import torch
 import torch.utils.data.dataloader
 import torchtext
@@ -84,14 +85,12 @@ class TestNN(unittest.TestCase):
         print('SimpleLogisticRegression Accuracy:',
               Metrics.accuracy(np.array(y_test), np.array(y_pred)))
 
-
 class TestCNN(unittest.TestCase):
 
     def test_simple_cnn_classifier(self):
         transform = torchvision.transforms.Compose([
             torchvision.transforms.Resize((28, 28)),
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize((0.5, ), (0.5, ))
         ])
 
         train_dataset = torchvision.datasets.MNIST(root='./data',
@@ -104,16 +103,20 @@ class TestCNN(unittest.TestCase):
                                                   transform=transform)
 
         train_loader = torch.utils.data.DataLoader(train_dataset,
-                                                   batch_size=64,
+                                                   batch_size=32,
                                                    shuffle=True)
         test_loader = torch.utils.data.DataLoader(test_dataset,
-                                                  batch_size=64,
+                                                  batch_size=32,
                                                   shuffle=False)
-
         model = SimpleCNNClassifier().to(device)
-        model.fit(train_loader)
-        model.summary()
-        y_pred, y_prob = model.predict(test_loader)
+
+        test_model = SimpleCNNClassifier().to(device)
+        test_model.load_state_dict(model.state_dict())
+
+        model.fit(train_loader, n_iters=1)
+
+        # model.summary()
+        y_pred, y_prob = test_model.predict(test_loader)
 
         y_test = []
         for _, y in test_loader:
@@ -121,8 +124,8 @@ class TestCNN(unittest.TestCase):
 
         print('SimpleCNNClassifier Accuracy:',
               Metrics.accuracy(y_test, y_pred))
-        print('SimpleCNNClassifier Precision, Recall, F1:',
-              Metrics.precision_recall_f1(y_test, y_pred))
+        # print('SimpleCNNClassifier Precision, Recall, F1:',
+        #       Metrics.precision_recall_f1(y_test, y_pred))
 
     def test_simple_cnn_regression(self):
         num_samples = 1000

@@ -45,7 +45,6 @@ class FLController:
         return self.server.predict(loader)
 
     def avg_grad_train(self, n_rounds):
-        self.server.model.train()
         progress_bar = tqdm(range(n_rounds * self.n_clients))
         for round_idx in range(n_rounds):
             gradients = []
@@ -60,6 +59,7 @@ class FLController:
                 progress_bar.update(1)
 
             self.aggregate_grads(gradients)
+
             self.server.eval(round_idx)
         progress_bar.close()
 

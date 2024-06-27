@@ -127,6 +127,10 @@ class Server:
     def get_model(self):
         return self.model
 
+    def get_gradients(self):
+        grads = [param.grad.clone() for param in self.model.parameters()]
+        return grads
+
     def predict(self, loader):
         self.model.eval()
         with torch.no_grad():
