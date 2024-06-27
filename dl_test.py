@@ -109,14 +109,10 @@ class TestCNN(unittest.TestCase):
                                                   batch_size=32,
                                                   shuffle=False)
         model = SimpleCNNClassifier().to(device)
-
-        test_model = SimpleCNNClassifier().to(device)
-        test_model.load_state_dict(model.state_dict())
-
         model.fit(train_loader, n_iters=1)
 
         # model.summary()
-        y_pred, y_prob = test_model.predict(test_loader)
+        y_pred, y_prob = model.predict(test_loader)
 
         y_test = []
         for _, y in test_loader:
