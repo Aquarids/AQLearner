@@ -17,7 +17,6 @@ class Client:
         self.optimizer = optimizer
         self.type = type
         self.train_loader = None
-        self.grads = None
 
     def setDataLoader(self, train_loader, n_iters=10):
         self.n_iters = n_iters
@@ -36,17 +35,12 @@ class Client:
                 loss.backward()
                 self.optimizer.step()
 
-                if self.grads is None:
-                    self.grads = [param.grad.clone() for param in self.model.parameters()]
-                else:
-                    self.grads += [param.grad.clone() for param in self.model.parameters()]
-
                 progress_bar.set_postfix(loss=loss.item())
                 progress_bar.update(1)
         progress_bar.close()
 
     def get_gradients(self):
-        return self.grads
+        return [param.grad.clone() for param in self.model.parameters()]
 
     def get_weights(self):
         return self.model.state_dict().copy()

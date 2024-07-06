@@ -108,6 +108,7 @@ class TestCNN(unittest.TestCase):
         test_loader = torch.utils.data.DataLoader(test_dataset,
                                                   batch_size=32,
                                                   shuffle=False)
+        
         model = SimpleCNNClassifier().to(device)
         model.fit(train_loader, n_iters=1)
 
@@ -697,14 +698,50 @@ class DownloadImage(unittest.TestCase):
             progress_bar.update(1)
         progress_bar.close()
 
+    def download_cifar10(self, save_path, save_rules, train=True):
+        if train:
+            cifar_data = torchvision.datasets.CIFAR10(root='./data',
+                                                      train=True,
+                                                      download=True)
+        else:
+            cifar_data = torchvision.datasets.CIFAR10(root='./data',
+                                                      train=False,
+                                                      download=True)
+
+        save_dir = save_path
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        for label in save_rules:
+            folder_name = os.path.join(save_dir, save_rules[label])
+            if not os.path.exists(folder_name):
+                os.makedirs(folder_name)
+
+        progress_bar = tqdm(total=len(cifar_data))
+        for idx, (image, label) in enumerate(cifar_data):
+            folder_name = save_rules[label]
+            img = image
+            img.save(os.path.join(save_dir, folder_name, f"{idx}.png"))
+            progress_bar.update(1)
+        progress_bar.close()
+
 
     def test_download_mnist(self):
-        path = "./data/mnist_images"
+        path = "./data/mnist_images_test"
         label_rules = {
             0: 'zero', 1: 'one', 2: 'two', 3: 'three', 4: 'four',
             5: 'five', 6: 'six', 7: 'seven', 8: 'eight', 9: 'nine'
         }
-        self.downloadMNIST(path, label_rules, True)
+        self.downloadMNIST(path, label_rules, False)
+        print("Images have been saved to", path)
+
+    def test_download_cifar10(self):
+        path = "./data/cifar10_images"
+        label_rules = {
+            0: 'airplane', 1: 'automobile', 2: 'bird', 3: 'cat', 4: 'deer',
+            5: 'dog', 6: 'frog', 7: 'horse', 8: 'ship', 9: 'truck'
+        }
+        self.download_cifar10(path, label_rules, True)
         print("Images have been saved to", path)
 
 

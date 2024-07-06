@@ -7,6 +7,7 @@ import sklearn.model_selection
 import sklearn.preprocessing
 import random
 import numpy as np
+import os
 
 from dl.simple_cnn_classifier import SimpleCNNClassifier
 from fl.client import Client
@@ -391,6 +392,7 @@ class TestFL(unittest.TestCase):
                                                    train=True,
                                                    download=True,
                                                    transform=transform)
+
         test_dataset = torchvision.datasets.MNIST(root='./data',
                                                   train=False,
                                                   download=True,
@@ -407,7 +409,7 @@ class TestFL(unittest.TestCase):
             "model_type":
             type_multi_classification,
             "learning_rate":
-            0.01,
+            0.001,
             "optimizer":
             "adam",
             "criterion":
@@ -447,7 +449,7 @@ class TestFL(unittest.TestCase):
                 "type": "linear",
                 "in_features": 7 * 7 * 64,
                 "out_features": 128
-            }, {
+            },  {
                 "type": "linear",
                 "in_features": 128,
                 "out_features": 10
@@ -461,22 +463,20 @@ class TestFL(unittest.TestCase):
         torch.manual_seed(0)
         random.seed(0)
 
-        n_clients = 1
+        n_clients = 5
         clients = []
         for i in range(n_clients):
             # each client should have its own model
             model, model_type, optimizer, criterion = ModelFactory(
             ).create_model(model_json)
-            model = SimpleCNNClassifier()
             client = Client(model, criterion, optimizer, type=model_type)
             clients.append(client)
 
         model, model_type, optimizer, criterion = ModelFactory().create_model(
             model_json)
-        model = SimpleCNNClassifier()
         server = Server(model, optimizer, criterion, type=model_type)
 
-        n_rounds = 1
+        n_rounds = 40
         n_iter = 1
 
         for client_id in range(n_clients):
@@ -485,7 +485,116 @@ class TestFL(unittest.TestCase):
         server.setTestLoader(test_loader)
 
         controller = FLController(server, clients)
-        controller.train(n_rounds, mode_avg_grad)
+        controller.train(n_rounds, mode_avg_weight)
+
+        if not os.path.exists("./cache/model"):
+            os.makedirs("./cache/model")
+        torch.save(server.model.state_dict(), "./cache/model/mnist_model.pth")
+
+        server.model_metric.summary()
+
+
+    def test_cifar10_fl_classification(self):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize((32, 32)),
+            torchvision.transforms.ToTensor(),
+        ])
+
+        train_dataset = torchvision.datasets.CIFAR10(root='./data',
+                                                    train=True,
+                                                    download=True,
+                                                    transform=transform)
+
+        test_dataset = torchvision.datasets.CIFAR10(root='./data',
+                                                    train=False,
+                                                    download=True,
+                                                    transform=transform)
+
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                batch_size=32,
+                                                shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset,
+                                                batch_size=32,
+                                                shuffle=False)
+
+        model_json = {
+            "model_type": type_multi_classification,
+            "learning_rate": 0.001,
+            "optimizer": "adam",
+            "criterion": "cross_entropy",
+            "layers": [{
+                "type": "conv2d",
+                "in_channels": 3,  # CIFAR-10 has 3 channels
+                "out_channels": 32,
+                "kernel_size": 3,
+                "padding": 1,
+                "stride": 1
+            }, {
+                "type": "relu"
+            }, {
+                "type": "maxpool",
+                "kernel_size": 2,
+                "stride": 2,
+                "padding": 0
+            }, {
+                "type": "conv2d",
+                "in_channels": 32,
+                "out_channels": 64,
+                "kernel_size": 3,
+                "padding": 1,
+                "stride": 1
+            }, {
+                "type": "relu"
+            }, {
+                "type": "maxpool",
+                "kernel_size": 2,
+                "stride": 2,
+                "padding": 0
+            }, {
+                "type": "reshape",
+                "shape": [-1, 64 * 8 * 8]  # Adjust shape to match the output size
+            }, {
+                "type": "linear",
+                "in_features": 8 * 8 * 64,
+                "out_features": 128
+            }, {
+                "type": "relu"
+            }, {
+                "type": "linear",
+                "in_features": 128,
+                "out_features": 10  # CIFAR-10 has 10 classes
+            }]
+        }
+
+        np.random.seed(0)
+        torch.manual_seed(0)
+        random.seed(0)
+
+        n_clients = 2
+        clients = []
+        for i in range(n_clients):
+            # each client should have its own model
+            model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
+            client = Client(model, criterion, optimizer, type=model_type)
+            clients.append(client)
+
+        model, model_type, optimizer, criterion = ModelFactory().create_model(model_json)
+        server = Server(model, optimizer, criterion, type=model_type)
+
+        n_rounds = 50
+        n_iter = 1
+
+        for client_id in range(n_clients):
+            clients[client_id].setDataLoader(train_loader, n_iter)
+
+        server.setTestLoader(test_loader)
+
+        controller = FLController(server, clients)
+        controller.train(n_rounds, mode_avg_weight)
+
+        if not os.path.exists("./cache/model"):
+            os.makedirs("./cache/model")
+        torch.save(server.model.state_dict(), "./cache/model/cifar10_model.pth")
 
         server.model_metric.summary()
 
