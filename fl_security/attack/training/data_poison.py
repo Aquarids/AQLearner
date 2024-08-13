@@ -3,6 +3,7 @@ import torch
 import torch.utils.data
 
 from tqdm import tqdm
+from scipy.stats import norm
 
 
 def binary_label_flip(loader):
@@ -128,3 +129,47 @@ def ood_data(loader, poison_ratio=0.1):
                                                       dim=0)),
                                        batch_size=loader.batch_size,
                                        shuffle=False)
+
+# http://arxiv.org/abs/1902.06156
+# against Trimmed Mean, Krum, and Bulyan
+def mean_shift_convergence_attack(n_clients, malicious_clients_params):
+    n_malicious = len(malicious_clients_params)
+    n_required = (n_clients // 2 + 1) - n_malicious
+    z_max = norm.ppf(1 - (n_clients - n_required) / n_required)
+
+    # Number of params
+    n_params = malicious_clients_params[0].shape[0]
+    adjusted_params = np.zeros_like(malicious_clients_params)
+
+    for j in range(n_params):
+        mu_j = np.mean([p[j] for p in malicious_clients_params])
+        sigma_j = np.std([p[j] for p in malicious_clients_params])
+
+        adjusted_params[:, j] = mu_j + z_max * sigma_j
+
+    for i in range(n_malicious):
+        malicious_clients_params[i] = adjusted_params[i]
+
+    return malicious_clients_params
+
+def mean_shift_backdoor_attack(n_clients, malicious_clients_params, alpha, backdoor_train_fn):
+    n_malicious = len(malicious_clients_params)
+    n_required = (n_clients // 2 + 1) - n_malicious
+    z_max = norm.ppf(1 - (n_clients - n_required) / n_required)
+
+    n_params = malicious_clients_params[0].shape[0]
+    mu_j = np.mean(malicious_clients_params, axis=0)
+    sigma_j = np.std(malicious_clients_params, axis=0)
+
+    V = backdoor_train_fn(mu_j, alpha)
+
+    adjusted_params = np.zeros_like(malicious_clients_params)
+    for j in range(n_params):
+        for i in range(n_malicious):
+            adjusted_params[i, j] = max(mu_j[j] - z_max * sigma_j[j], min(V[j], mu_j[j] + z_max * sigma_j[j]))
+
+    for i in range(n_malicious):
+        malicious_clients_params[i] = adjusted_params[i]
+
+    return malicious_clients_params
+

@@ -725,6 +725,34 @@ class DownloadImage(unittest.TestCase):
             progress_bar.update(1)
         progress_bar.close()
 
+    def download_california_housing(self, save_path):
+        X, y = sklearn.datasets.fetch_california_housing(return_X_y=True)
+        scaler = StandardScaler()
+        X = scaler.fit_transform(X)
+        X, y = torch.tensor(X, dtype=torch.float32), torch.tensor(y, dtype=torch.float32).view(-1, 1)
+
+        X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=0.1, random_state=42)
+
+        save_dir = save_path
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        X_train = X_train.numpy()
+        y_train = y_train.numpy()
+        X_test = X_test.numpy()
+        y_test = y_test.numpy()
+
+        feature_names = [f'feature{i+1}' for i in range(X_train.shape[1])]
+        column_names = feature_names + ['target']
+
+        # Save training data to CSV
+        train_data = pd.DataFrame(data=torch.cat((torch.tensor(X_train), torch.tensor(y_train)), dim=1).numpy(), columns=column_names)
+        train_data.to_csv(f"{save_path}/ca_housing_train.csv", index=False)
+        
+        # Save testing data to CSV
+        test_data = pd.DataFrame(data=torch.cat((torch.tensor(X_test), torch.tensor(y_test)), dim=1).numpy(), columns=column_names)
+        test_data.to_csv(f"{save_path}/ca_housing_test.csv", index=False)
+
 
     def test_download_mnist(self):
         path = "./data/mnist_images_test"
@@ -743,6 +771,11 @@ class DownloadImage(unittest.TestCase):
         }
         self.download_cifar10(path, label_rules, True)
         print("Images have been saved to", path)
+
+    def test_download_ca_hosing(self):
+        path = "./data/ca_housing"
+        self.download_california_housing(path)
+        print("Data has been saved to", path)
 
 
 if __name__ == '__main__':

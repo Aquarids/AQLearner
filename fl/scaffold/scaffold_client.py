@@ -31,7 +31,7 @@ class ScaffoldClient(Client):
                 with torch.no_grad():
                     for w_l, c_l, c_g in zip(self.model.parameters(), self.c,
                                              global_c):
-                        w_l.grad += c_l - c_g
+                        w_l.grad += c_g - c_l
 
                 self.optimizer.step()
                 progress_bar.update(1)
