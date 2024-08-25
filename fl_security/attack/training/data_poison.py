@@ -173,3 +173,16 @@ def mean_shift_backdoor_attack(n_clients, malicious_clients_params, alpha, backd
 
     return malicious_clients_params
 
+# http://arxiv.org/abs/1807.00459
+def _constrain_and_scale_backdoor_loss(y_pred, y_true, model, alpha, anomaly_penalty, p_norm):
+    loss = torch.nn.functional.cross_entropy(y_pred, y_true)
+    p_norm_loss = anomaly_penalty * torch.norm(torch.cat([p.view(-1) for p in model.parameters()]), p=p_norm)
+    return alpha * loss + (1 - alpha) * p_norm_loss
+        
+def _estimate_upper_bound():
+    raise NotImplementedError
+
+def _scale_backdoor_model_weights(model, gamma):
+    with torch.no_grad():
+        for p in model.parameters():
+            p.data *= gamma
