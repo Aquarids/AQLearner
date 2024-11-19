@@ -61,10 +61,10 @@ class SimpleCNNClassifier(torch.nn.Module):
             predictions = []
             possibilities = []
             for X, _ in loader:
-                possiblity = self.forward(X)
-                possibilities += possiblity.tolist()
-                predictions += torch.argmax(possiblity, dim=1).tolist()
-            return predictions, possiblity
+                possibility = self.forward(X)
+                possibilities += possibility.tolist()
+                predictions += torch.argmax(possibility, dim=1).tolist()
+            return predictions, possibility
 
     def summary(self):
         print("Model Detail: ", self)

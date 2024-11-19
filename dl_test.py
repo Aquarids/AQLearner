@@ -15,6 +15,7 @@ import pandas as pd
 
 from dl.simple_linear_regression import SimpleLinearRegression
 from dl.simple_logistic_regression import SimpleLogisticRegression
+from dl.simple_cifar10 import CIFAR10Net
 from dl.simple_cnn_classifier import SimpleCNNClassifier
 from dl.simple_cnn_regression import SimpleCNNRegression
 from dl.res_net import ResNet
@@ -86,6 +87,32 @@ class TestNN(unittest.TestCase):
               Metrics.accuracy(np.array(y_test), np.array(y_pred)))
 
 class TestCNN(unittest.TestCase):
+
+    def test_cifar10_net(self):
+        transformer = torchvision.transforms.Compose([
+            torchvision.transforms.ToTensor(),
+        ])
+        train_dataset = torchvision.datasets.CIFAR10(root='./data',
+                                                        train=True,
+                                                        download=True,
+                                                        transform=transformer)
+        test_dataset = torchvision.datasets.CIFAR10(root='./data',
+                                                        train=False,
+                                                        download=True,
+                                                        transform=transformer)
+        
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=32,
+                                                   shuffle=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset,
+                                                  batch_size=32,
+                                                  shuffle=False)
+
+        model = CIFAR10Net().to(device)
+        model.fit(train_loader, n_iters=1)
+
+        accuracy = model.test(test_loader)
+        print('CIFAR10Net Accuracy:', accuracy)
 
     def test_simple_cnn_classifier(self):
         transform = torchvision.transforms.Compose([
