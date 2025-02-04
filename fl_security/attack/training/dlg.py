@@ -63,12 +63,12 @@ class DLG:
         self.n_classes = n_classes
 
     def reconstruct_inputs_from_grads(self,
-                                      target_grads,
-                                      lr=1,
-                                      n_iter=100):
+                                    target_grads,
+                                    lr=1,
+                                    n_iter=100):
         recon_data = torch.randn(1,
                                  *self.input_shape,
-                                 requires_grad=True)
+                                requires_grad=True)
         random_data = recon_data.detach().clone()
         recon_label = torch.randn(1, self.n_classes, requires_grad=True)
 

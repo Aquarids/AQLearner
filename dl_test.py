@@ -5,6 +5,7 @@ import torch
 import torch.utils.data.dataloader
 import torchtext
 import torch.utils.data
+import shutil
 import dl.metrics as Metrics
 import sklearn.datasets
 import sklearn.model_selection
@@ -685,8 +686,61 @@ import os
 from PIL import Image
 from tqdm import tqdm
 
-class DownloadImage(unittest.TestCase):
+class DownloadImage(unittest.TestCase):        
 
+    @staticmethod
+    def save_images(save_dir, save_rules, data):
+        toPil = torchvision.transforms.ToPILImage()
+    
+        # Save images
+        for label in save_rules:
+            folder_name = os.path.join(save_dir, save_rules[label])
+            if not os.path.exists(folder_name):
+                os.makedirs(folder_name)
+
+        progress_bar = tqdm(total=len(data))
+        for idx, (image, label) in enumerate(data):
+            folder_name = save_rules[label]
+            img = toPil(image)
+            img.save(os.path.join(save_dir, folder_name, f"{idx}.png"))
+            progress_bar.update()
+        progress_bar.close()
+
+    def splitMNIST(self, save_path, save_rules, n, alpha):
+        transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+        
+        mnist_data = torchvision.datasets.MNIST(root='./data',
+                                                train=True,
+                                                download=True,
+                                                transform=transform)
+
+        if os.path.exists(save_path):
+            shutil.rmtree(save_path)
+
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
+        total_indices = list(range(len(mnist_data)))
+        random.shuffle(total_indices)
+        print("Total number of images:", len(total_indices))
+
+        dirichlet_dist = np.random.dirichlet([alpha] * n)
+        proportions = (dirichlet_dist * len(total_indices)).astype(int) 
+        partition_indices = []
+        print("Each count of images in each partition:", proportions)
+
+        start_idx = 0
+        for i in range(n):
+            end_idx = start_idx + proportions[i]
+            partition_indices.append(total_indices[start_idx:end_idx])
+            start_idx = end_idx
+
+        for i in range(n):
+            partition_save_dir = os.path.join(save_path, f"partition_{i}")
+            if not os.path.exists(partition_save_dir):
+                os.makedirs(partition_save_dir)
+
+            DownloadImage.save_images(partition_save_dir, save_rules, [mnist_data[j] for j in partition_indices[i]])
 
     def downloadMNIST(self, save_path, save_rules, train=True):
         transform = torchvision.transforms.Compose(
@@ -709,22 +763,9 @@ class DownloadImage(unittest.TestCase):
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        toPil = torchvision.transforms.ToPILImage()
-    
         # Save images
-        for label in save_rules:
-            folder_name = os.path.join(save_dir, save_rules[label])
-            if not os.path.exists(folder_name):
-                os.makedirs(folder_name)
-
-        progress_bar = tqdm(total=len(mnist_data))
-        for idx, (image, label) in enumerate(mnist_data):
-            folder_name = save_rules[label]
-            img = toPil(image)
-            img.save(os.path.join(save_dir, folder_name, f"{idx}.png"))
-            progress_bar.update(1)
-        progress_bar.close()
-
+        DownloadImage.save_images(save_dir, save_rules, mnist_data)
+        
     def download_cifar10(self, save_path, save_rules, train=True):
         if train:
             cifar_data = torchvision.datasets.CIFAR10(root='./data',
@@ -780,6 +821,14 @@ class DownloadImage(unittest.TestCase):
         test_data = pd.DataFrame(data=torch.cat((torch.tensor(X_test), torch.tensor(y_test)), dim=1).numpy(), columns=column_names)
         test_data.to_csv(f"{save_path}/ca_housing_test.csv", index=False)
 
+    def test_split_mnist(self):
+        path = "./data/mnist_images"
+        label_rules = {
+            0: 'zero', 1: 'one', 2: 'two', 3: 'three', 4: 'four',
+            5: 'five', 6: 'six', 7: 'seven', 8: 'eight', 9: 'nine'
+        }
+        self.splitMNIST(path, label_rules, 10, 0.5)
+        print("Images have been saved to", path)
 
     def test_download_mnist(self):
         path = "./data/mnist_images_test"
