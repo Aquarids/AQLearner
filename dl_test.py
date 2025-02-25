@@ -20,6 +20,7 @@ from dl.simple_cifar10 import CIFAR10Net
 from dl.simple_cnn_classifier import SimpleCNNClassifier
 from dl.simple_cnn_regression import SimpleCNNRegression
 from dl.res_net import ResNet
+from dl.res_net_18 import ResNet18_CIFAR100
 from dl.gan import GAN
 from dl.rnn import RNN
 from dl.gru import GRU
@@ -183,6 +184,59 @@ class TestCNN(unittest.TestCase):
 
 
 class TestResNet(unittest.TestCase):
+
+    def test_res_net_18(self):
+
+        train_transform = torchvision.transforms.Compose([
+            torchvision.transforms.RandomCrop(32, padding=4),
+            torchvision.transforms.RandomHorizontalFlip(),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(
+                mean=[0.5071, 0.4867, 0.4408],
+                std=[0.2675, 0.2565, 0.2761]
+            )
+        ])
+
+        test_transform = torchvision.transforms.Compose([
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(
+                mean=[0.5071, 0.4867, 0.4408],
+                std=[0.2675, 0.2565, 0.2761]
+            )
+        ])
+
+        train_dataset = torchvision.datasets.CIFAR100(root='./data',
+                                                    train=True,
+                                                    download=True,
+                                                    transform=train_transform)
+
+        test_dataset = torchvision.datasets.CIFAR100(root='./data',
+                                                    train=False,
+                                                    download=True,
+                                                    transform=test_transform)
+
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                batch_size=128,
+                                                shuffle=True,
+                                                num_workers=4,
+                                                pin_memory=True)
+
+        test_loader = torch.utils.data.DataLoader(test_dataset,
+                                                batch_size=128,
+                                                shuffle=False,
+                                                num_workers=4,
+                                                pin_memory=True)
+        
+        model = ResNet18_CIFAR100().to(device)
+        model.fit(train_loader, learning_rate=0.01, n_iters=100)
+
+        y_pred, y_prob = model.predict(test_loader)
+
+        y_test = []
+        for _, y in test_loader:
+            y_test += y.tolist()
+
+        print('ResNet Accuracy:', Metrics.accuracy(y_test, y_pred))
 
     def test_res_net(self):
         num_classes = 10
