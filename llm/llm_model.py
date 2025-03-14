@@ -1,10 +1,9 @@
-from langchain_community.llms import HuggingFacePipeline
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+from langchain_huggingface import HuggingFacePipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, BitsAndBytesConfig
 from langchain_core.prompts import PromptTemplate
-from langchain.chains import LLMChain
 
 import os
-
+import torch
 
 class LLMModel:
 
@@ -12,6 +11,7 @@ class LLMModel:
         self.model_name = model_name
         self.model_id = model_id
         self.save_dir = dir
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.model = None
         self.tokenizer = None
@@ -27,13 +27,13 @@ class LLMModel:
             tokenizer=tokenizer,
             max_new_tokens=128
         )
-        self.llm = HuggingFacePipeline(text_generation_pipe)
+        self.llm = HuggingFacePipeline(pipeline=text_generation_pipe)
 
     def _load_model(self, model_id):
         model_path = self._model_path()
         if os.path.exists(model_path):
             model = AutoModelForCausalLM.from_pretrained(
-                model_path, load_in_4bit=True, device_map="auto", low_cpu_mem_usage=True
+                model_path, device_map="auto", low_cpu_mem_usage=True
             )
             tokenizer = AutoTokenizer.from_pretrained(model_path)
         else:
@@ -42,10 +42,18 @@ class LLMModel:
         self.model = model
         self.tokenizer = tokenizer
         return model, tokenizer
+    
+    def _quant_config(self):
+        return BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True
+        )
 
     def _download_model(self, model_id, model_path):
         model = AutoModelForCausalLM.from_pretrained(
-                model_id, load_in_4bit=True, device_map="auto", low_cpu_mem_usage=True
+                model_id, device_map="auto", low_cpu_mem_usage=True, quantization_config=self._quant_config()
             )
         tokenizer = AutoTokenizer.from_pretrained(self.model_id)
 
@@ -64,5 +72,6 @@ class LLMModel:
                 指令：{instruction}
                 输出："""
         prompt = PromptTemplate(template=template, input_variables=["instruction"])
-        chain = LLMChain(llm=self.llm, prompt=prompt)
-        return chain.run(instruction=instruction)
+        response = prompt | self.llm
+        result = response.invoke({"instruction": instruction})
+        return result

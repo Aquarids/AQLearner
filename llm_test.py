@@ -4,7 +4,7 @@ from llm.llm_model import LLMModel
 import os
 
 
-class TestLLMModel(unittest.TestCase):
+class TestLLM(unittest.TestCase):
 
     def test_deepseek_7b(self):
         project_root = os.path.dirname(__file__)
