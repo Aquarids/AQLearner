@@ -228,15 +228,17 @@ class TestResNet(unittest.TestCase):
                                                 pin_memory=True)
         
         model = ResNet18_CIFAR100().to(device)
-        model.fit(train_loader, learning_rate=0.01, n_iters=100)
+        for _ in range(50):
 
-        y_pred, y_prob = model.predict(test_loader)
+            model.fit(train_loader, learning_rate=0.01, n_iters=1)
 
-        y_test = []
-        for _, y in test_loader:
-            y_test += y.tolist()
+            y_pred, y_prob = model.predict(test_loader)
 
-        print('ResNet Accuracy:', Metrics.accuracy(y_test, y_pred))
+            y_test = []
+            for _, y in test_loader:
+                y_test += y.tolist()
+
+            print('ResNet Accuracy:', Metrics.accuracy(y_test, y_pred))
 
     def test_res_net(self):
         num_classes = 10

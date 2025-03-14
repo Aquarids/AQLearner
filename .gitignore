@@ -4,3 +4,4 @@
 **/plot
 /cache
 .venv
+/models
