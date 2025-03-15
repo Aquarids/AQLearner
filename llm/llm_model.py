@@ -1,8 +1,11 @@
 from langchain_huggingface import HuggingFacePipeline
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, BitsAndBytesConfig
 from langchain_core.prompts import PromptTemplate
-from .template_manager import TemplateManager
 from langchain.memory import ConversationBufferWindowMemory
+from langchain_core.runnables import RunnablePassthrough, RunnableParallel
+
+from .template_manager import TemplateManager
+from .rag import RAG
 
 import os
 import torch
@@ -15,6 +18,7 @@ class LLMModel:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.template_manager = TemplateManager()
+        self.rag = RAG(os.path.join(dir, "rag_cache"))
         self.template_config = None
         self.model_name = None
 
@@ -32,23 +36,30 @@ class LLMModel:
             "text-generation",
             model=model,
             tokenizer=tokenizer,
-            max_new_tokens=128,
+            max_new_tokens=4096,
+            return_full_text=False,
             bos_token_id=tokenizer.bos_token_id,
             eos_token_id=tokenizer.eos_token_id,
             pad_token_id=tokenizer.pad_token_id,
         )
         llm = HuggingFacePipeline(pipeline=text_generation_pipe)
+
         prompt = PromptTemplate.from_template(
             self.template_config.template,
         )
-        memory = self._memory()
+        self.memory = self._memory()
         
         self.llm = llm
         self.template = prompt
-        self.memory = memory
+
+        input = RunnableParallel(
+            context=lambda x: self.rag.retrieve_fact(x['instruction']),
+            history=lambda x: self.memory.load_memory_variables(x)['history'],
+            instruction=lambda x: x['instruction']
+        )
 
         self.chain = (
-            {"instruction": lambda x: x["instruction"], "history": memory.load_memory_variables}
+            input
             | prompt
             | llm
         )

@@ -13,7 +13,7 @@ class TestLLM(unittest.TestCase):
         model = LLMModel("deepseek-ai/deepseek-llm-7b-chat", dir)
         model.init()
 
-        instruction = "请问你是谁？"
+        instruction = "量子纠缠的基本原理是什么？"
 
         response = model.talk(instruction)
         print(response)

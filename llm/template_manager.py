@@ -21,6 +21,7 @@ class TemplateManager:
                     name="DeepSeek-7B",
                     template=(
                         "<|begin▁of▁sentence|>System: You are an AI assistant.\n\n"
+                        "Context:\n{context}\n\n"
                         "Historical Dialogue:\n{history}\n\n"
                         "Current Instruction: {instruction}\n"
                         "<|end▁of▁sentence|>\n"
@@ -36,7 +37,7 @@ class TemplateManager:
                     name="LLaMA-2",
                     template=(
                         "[INST] <<SYS>>\n"
-                        "You are a helpful assistant. Consider chat history:\n{history}\n"
+                        "You are a helpful assistant. Consider chat history:\n{history}\n with context:\n{context}\n"
                         "<</SYS>>\n\n"
                         "{instruction} [/INST]"
                     ),
@@ -51,6 +52,7 @@ class TemplateManager:
                     template=(
                         "<|im_start|>system\n"
                         "history: {history}<|im_end|>\n"
+                        "context: {context}\n"
                         "<|im_start|>user\n"
                         "{instruction}<|im_end|>\n"
                         "<|im_start|>assistant\n"
@@ -66,6 +68,7 @@ class TemplateManager:
                     template=(
                         "<|im_start|>system\n"
                         "history: \n{history}<|im_end|>\n"
+                        "context: {context}\n"
                         "<|im_start|>user\n"
                         "{instruction}<|im_end|>\n"
                         "<|im_start|>assistant\n"
