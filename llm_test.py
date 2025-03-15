@@ -10,11 +10,10 @@ class TestLLM(unittest.TestCase):
         project_root = os.path.dirname(__file__)
         dir = os.path.join(project_root, "models")
 
-        model = LLMModel("deepseek-7b", "deepseek-ai/deepseek-llm-7b-chat", dir)
+        model = LLMModel("deepseek-ai/deepseek-llm-7b-chat", dir)
         model.init()
 
-        template = """<|begin▁of▁sentence|>User: {instruction}<|end▁of▁sentence|>\nAssistant:"""
         instruction = "请问你是谁？"
 
-        response = model._talk(instruction, template)
+        response = model.talk(instruction)
         print(response)

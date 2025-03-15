@@ -1,7 +1,4 @@
 ecdsa==0.19.0
-langchain==0.3.20
-langchain_community==0.3.19
-langchain_core==0.3.45
 matplotlib==3.5.0
 numpy
 pandas
@@ -13,4 +10,3 @@ torch==2.2.2
 torchtext==0.17.2
 torchvision==0.17.2
 tqdm==4.66.4
-transformers==4.49.0
