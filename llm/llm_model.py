@@ -2,34 +2,43 @@ from langchain_huggingface import HuggingFacePipeline
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, BitsAndBytesConfig
 from langchain_core.prompts import PromptTemplate
 from langchain.memory import ConversationBufferWindowMemory
-from langchain_core.runnables import RunnablePassthrough, RunnableParallel
+from langchain_core.runnables import RunnableParallel, RunnableLambda, RunnableBranch
 
 from .template_manager import TemplateManager
 from .rag import RAG
 
 import os
 import torch
+from halo import Halo
 
 class LLMModel:
 
-    def __init__(self, model_id, dir):
+    def __init__(self, model_id, dir, use_history=False, use_retrieval=False, use_cot=False):
         self.model_id = model_id
         self.save_dir = dir
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.use_history = use_history
+        self.use_retrieval = use_retrieval
+        self.use_cot = use_cot
 
         self.template_manager = TemplateManager()
-        self.rag = RAG(os.path.join(dir, "rag_cache"))
-        self.template_config = None
         self.model_name = None
 
         self.model = None
         self.tokenizer = None
         self.llm = None
         self.template = None
+        self.rag = None
         self.memory = None
         self.chain = None
 
     def init(self):
+        if self.use_retrieval:
+            self.rag = self._init_rag()
+
+        if self.use_history:
+            self.memory = self._init_memory()
+
         model, tokenizer = self._load_model(self.model_id)
 
         text_generation_pipe = pipeline(
@@ -37,6 +46,7 @@ class LLMModel:
             model=model,
             tokenizer=tokenizer,
             max_new_tokens=4096,
+            truncation=True,
             return_full_text=False,
             bos_token_id=tokenizer.bos_token_id,
             eos_token_id=tokenizer.eos_token_id,
@@ -44,25 +54,52 @@ class LLMModel:
         )
         llm = HuggingFacePipeline(pipeline=text_generation_pipe)
 
-        prompt = PromptTemplate.from_template(
-            self.template_config.template,
-        )
-        self.memory = self._memory()
-        
+        template = self.template_manager.get_template(self.model_id, history=self.use_history, context=self.use_retrieval, cot=self.use_cot)
+        print(template)
+        prompt = PromptTemplate.from_template(template=template)
+
         self.llm = llm
         self.template = prompt
 
-        input = RunnableParallel(
-            context=lambda x: self.rag.retrieve_fact(x['instruction']),
-            history=lambda x: self.memory.load_memory_variables(x)['history'],
-            instruction=lambda x: x['instruction']
-        )
+        input = self._build_dynamic_input(self.use_retrieval, self.use_history, self.use_cot)
 
         self.chain = (
             input
             | prompt
             | llm
         )
+
+    def _init_memory(self):
+        memory = ConversationBufferWindowMemory(
+            k=10,
+            memory_key="history",
+            input_key="instruction"
+        )
+        return memory
+    
+    def _init_rag(self):
+        rag = RAG(os.path.join(self.save_dir, "rag_cache"))
+        return rag
+
+    def _build_dynamic_input(self, include_context: bool, include_history: bool, include_cot_reasoning: bool):
+        instruction_fields = {
+            "instruction": lambda x: x['instruction']
+        }
+        
+        conditional_fields = [
+            ("context", include_context, lambda x: {"context": self.rag.retrieve_fact(x['instruction'])}),
+            ("history", include_history, lambda x: {"history": self.memory.load_memory_variables(x)['history']}),
+            ("cot_reasoning", include_cot_reasoning, lambda x: {"cot_reasoning": self._generate_cot_reasoning()})
+        ]
+        
+        dynamic_fields = {}
+        for field_name, flag, func in conditional_fields:
+            if flag:
+                dynamic_fields[field_name] = RunnableLambda(func)
+            else:
+                dynamic_fields[field_name] = RunnableLambda(lambda _: {field_name: None})
+        
+        return RunnableParallel(**instruction_fields, **dynamic_fields)
 
     def _load_model(self, model_id):
         model_path = self._model_path()
@@ -76,12 +113,17 @@ class LLMModel:
             model, tokenizer = self._download_model(model_id, model_path)
             need_save = True
 
-        self.template_config = self.template_manager.get_template_config(self.model_id, self.tokenizer)
-        self.model_name = self.template_config.name
+        template_config = self.template_manager.get_template_config(self.model_id, self.tokenizer)
+        self.model_name = template_config.name
 
-        tokenizer.bos_token = self.template_config.bos_token
-        tokenizer.eos_token = self.template_config.eos_token
-        tokenizer.pad_token = self.template_config.pad_token
+        if template_config.bos_token is not None:
+            tokenizer.bos_token = template_config.bos_token
+
+        if template_config.eos_token is not None:
+            tokenizer.eos_token = template_config.eos_token
+
+        if template_config.pad_token is not None:
+            tokenizer.pad_token = template_config.pad_token
 
         if need_save:
             self._save_model(model, tokenizer, model_path)
@@ -97,6 +139,14 @@ class LLMModel:
             bnb_4bit_quant_type="nf4",
             bnb_4bit_use_double_quant=True
         )
+    
+    def _generate_cot_reasoning(self):
+        return f"""
+                Step 1: analyze the instruction\n
+                Step 2: contextual relative domain knowledge\n
+                Step 3: reasoning\n
+                Step 4: answer\n
+                """
 
     def _download_model(self, model_id, model_path):
         model = AutoModelForCausalLM.from_pretrained(
@@ -114,16 +164,12 @@ class LLMModel:
     def _model_path(self):
         return f"{self.save_dir}/{self.model_name}"
     
-    def _memory(self):
-        memory = ConversationBufferWindowMemory(
-            k=10,
-            memory_key="history",
-            input_key="instruction"
-        )
-        return memory
-    
     def talk(self, instruction):
         inputs = {"instruction": instruction}
+        spinner = Halo(text='Processing...', spinner='dots')
+        spinner.start()
         response = self.chain.invoke(inputs)
-        self.memory.save_context(inputs, {"output": response})
+        spinner.succeed("Done!")
+        if self.use_history:
+            self.memory.save_context(inputs, {"history": response})
         return response

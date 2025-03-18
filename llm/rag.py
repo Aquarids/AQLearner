@@ -8,8 +8,7 @@ import os
 
 class RAG:
 
-    def __init__(self, dir, max_context=4096):
-        self.max_context = max_context
+    def __init__(self, dir):
 
         if not os.path.exists(dir):
             os.makedirs(dir)
@@ -24,10 +23,10 @@ class RAG:
             separators=["\n===", "\n##", "\n\n", "\n", "。"]
         )
 
-    def retrieve_fact(self, query: str, lang: str = "zh"):
+    def retrieve_fact(self, query: str, lang: str = "zh", max_len: int = 4096):
         docs = self._wiki_retriever(query, lang)
         docs = self._split(docs)
-        return self._compress_docs(docs)  
+        return self._compress_docs(docs, max_len)  
         
     def _wiki_retriever(self, query: str, lang: str = "zh", top_k: int = 3):
         loader = WikipediaLoader(
@@ -45,12 +44,12 @@ class RAG:
         ])
         return split
     
-    def _compress_docs(self, docs):
+    def _compress_docs(self, docs, max_len=4096):
         compressed = []
         total_len = 0
         for doc in docs:
-            if total_len + len(doc.page_content) > self.max_context:
-                remaining = self.max_context - total_len
+            if total_len + len(doc.page_content) > max_len:
+                remaining = max_len - total_len
                 compressed.append(doc.page_content[:remaining])
                 break
             compressed.append(doc.page_content)
