@@ -68,13 +68,13 @@ class TemplateManager:
     def _get_default_token(self, tokenizer: AutoTokenizer) -> str:
         bos_token = tokenizer.bos_token
         eos_token = tokenizer.eos_token
-        pad_token = tokenizer.pad_token or tokenizer.eos_token
+        pad_token = tokenizer.pad_token
         return bos_token, eos_token, pad_token
     
     def get_template(self, model_id: str, history=False, context=False, cot=False) -> str:
         config = self._template_registry[model_id]
         if config is None:
-            config = self._default_template()
+            config = self._default_template_config()
 
         if config.id == MODEL_ID_DEEPSEEK_7B:
             # template=(
@@ -86,7 +86,7 @@ class TemplateManager:
             #     "<|end▁of▁sentence|>\n"
             #     "Assistant:"
             # ),
-            return f"{config.bos_token}{config.template_system} {config.template_cot if cot else ''}{config.template_context if context else ''}{config.template_history if history else ''}{config.template_user}\n{config.eos_token}\nAssistant:"
+            return f"{config.bos_token}\n{config.template_system} {config.template_cot if cot else ''}{config.template_context if context else ''}{config.template_history if history else ''}{config.template_user}\n{config.eos_token}\nAssistant:"
         elif config.id == MODEL_ID_LLAMA_2:
             # template=(
             #     "[INST] <<SYS>>\n"
@@ -110,7 +110,7 @@ class TemplateManager:
             # default template
             return f"{config.template_system}{config.template_context if context else ''}{config.template_history if history else ''}{config.template_cot if cot else ''}{config.template_user}"
 
-    def _default_template(self) -> str:
+    def _default_template_config(self) -> str:
         return ModelTemplateConfig(
             name="Default",
             template_system="System: \n",
@@ -120,15 +120,9 @@ class TemplateManager:
             template_user="User: {instruction}\n",
         )
 
-    def get_template_config(self, model_id: str, tokenizer: AutoTokenizer) -> ModelTemplateConfig:
+    def get_template_config(self, model_id: str) -> ModelTemplateConfig:
         for key in self._template_registry:
             if model_id == key:
                 return self._template_registry[key]
         
-        bos_token, eos_token, pad_token = self._get_default_token(tokenizer)
-        return ModelTemplateConfig(
-            template="System: history: {history}\ncontext: {context}\nCurrent Instruction: {instruction}\n",
-            bos_token=bos_token,
-            eos_token=eos_token,
-            pad_token=pad_token
-        )
+        return self._default_template_config()
