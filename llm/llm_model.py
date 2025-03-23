@@ -5,7 +5,8 @@ from langchain.memory import ConversationBufferWindowMemory
 from langchain_core.runnables import RunnableParallel, RunnableLambda
 
 from .template_manager import TemplateManager
-from .rag import RAG
+from .rag.wiki_rag import WikiRAG
+from .rag.contriever_rag import ContrieverRAG
 
 import os
 import torch
@@ -16,7 +17,6 @@ class LLMModel:
     def __init__(self, model_id, dir, use_history=False, use_retrieval=False, use_cot=False):
         self.model_id = model_id
         self.save_dir = dir
-        self.cache_dir = os.path.join(self.save_dir, "cache")
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.use_history = use_history
         self.use_retrieval = use_retrieval
@@ -33,9 +33,9 @@ class LLMModel:
         self.memory = None
         self.chain = None
 
-    def init(self):
+    def init(self, rag=None):
         if self.use_retrieval:
-            self.rag = self._init_rag()
+            self.rag = rag
 
         if self.use_history:
             self.memory = self._init_memory()
@@ -46,7 +46,7 @@ class LLMModel:
             "text-generation",
             model=model,
             tokenizer=tokenizer,
-            max_new_tokens=1024,
+            max_new_tokens=4096,
             truncation=True,
             return_full_text=False,
             temperature=0.9,
@@ -57,19 +57,24 @@ class LLMModel:
         llm = HuggingFacePipeline(pipeline=text_generation_pipe)
 
         template = self.template_manager.get_template(self.model_id, history=self.use_history, context=self.use_retrieval, cot=self.use_cot)
-        print(template)
-        prompt = PromptTemplate.from_template(template=template)
+        prompt = self._prompt_template(template)
 
         self.llm = llm
         self.template = prompt
 
         input = self._build_dynamic_input(self.use_retrieval, self.use_history, self.use_cot)
+        debug_input = RunnableLambda(lambda x: print("DEBUG INPUT:", x) or x)
 
         self.chain = (
             input
             | prompt
+            | debug_input
             | llm
         )
+
+    def _prompt_template(self, template):
+        return PromptTemplate.from_template(template=template)
+
 
     def _init_memory(self):
         memory = ConversationBufferWindowMemory(
@@ -80,7 +85,9 @@ class LLMModel:
         return memory
     
     def _init_rag(self):
-        rag = RAG(os.path.join(self.save_dir, "rag_cache"))
+        # rag = WikiRAG(os.path.join(self.save_dir, "wiki_rag_cache"))
+        rag = ContrieverRAG(os.path.join(self.save_dir, "contriever_rag_cache"))
+        rag.load_index()
         return rag
 
     def _build_dynamic_input(
@@ -118,9 +125,9 @@ class LLMModel:
 
         if os.path.exists(model_path):
             model = AutoModelForCausalLM.from_pretrained(
-                model_path, device_map="auto", low_cpu_mem_usage=True, use_cache=True, cache_dir=self.cache_dir, local_files_only=True
+                model_path, device_map="auto", low_cpu_mem_usage=True, use_cache=True, local_files_only=True
             )
-            tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True, use_fast=False, cache_dir=self.cache_dir)
+            tokenizer = AutoTokenizer.from_pretrained(model_path, device_map="auto", trust_remote_code=True, use_fast=False)
         else:
             model, tokenizer = self._download_model(model_id)
             need_save = True
@@ -159,9 +166,9 @@ class LLMModel:
 
     def _download_model(self, model_id):
         model = AutoModelForCausalLM.from_pretrained(
-                model_id, device_map="auto", low_cpu_mem_usage=True, quantization_config=self._quant_config(), use_cache=True, cache_dir=self.cache_dir,
+                model_id, device_map="auto", low_cpu_mem_usage=True, quantization_config=self._quant_config(), use_cache=True
             )
-        tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, use_fast=False, cache_dir=self.cache_dir)
+        tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, use_fast=False)
         return model, tokenizer
     
     def _save_model(self, model, tokenizer, model_path):
@@ -183,3 +190,45 @@ class LLMModel:
         if self.use_history:
             self.memory.save_context(inputs, {"history": response})
         return response
+
+    def tokenize(self, text, padding=True, truncation=True):
+        return self.tokenizer(text, padding=padding, truncation=truncation, return_tensors="pt").to(self.device)
+
+    def generate(self, input_ids, max_length=50):
+        with torch.no_grad():
+            outputs = self.model.generate(input_ids, max_length=max_length)
+        return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+    
+    def forward(self, inputs_ids, labels_ids):
+        with torch.no_grad():
+            outputs = self.model(inputs_ids, labels=labels_ids)
+        return outputs
+    
+    def compute_gradients(self, inputs_ids, labels_ids):
+        with torch.enable_grad():
+            outputs = self.model(inputs_ids, labels=labels_ids)
+            loss = outputs.loss
+            loss.backward()
+            grad = self.model.get_input_embeddings().weight.grad
+        return grad
+    
+    def get_input_embeddings(self):
+        return self.model.get_input_embeddings()
+    
+    def get_input_embeddings_weight(self):
+        return self.model.get_input_embeddings().weight.detach()
+    
+    def decode(self, input_ids):
+        return self.tokenizer.decode(input_ids, skip_special_tokens=True)
+    
+    def batch_decode(self, input_ids):
+        return self.tokenizer.batch_decode(input_ids, skip_special_tokens=True)
+
+    def get_vocab(self):
+        return self.tokenizer.get_vocab()
+    
+    def embedding(self, input_ids):
+        with torch.no_grad():
+            outputs = self.model.get_input_embeddings()(input_ids)
+        return outputs
+    

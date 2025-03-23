@@ -19,7 +19,7 @@ class TestLLM(unittest.TestCase):
         model = LLMModel("deepseek-ai/deepseek-llm-7b-chat", dir, use_cot=True, use_retrieval=False, use_history=False)
         model.init()
 
-        instruction = "鸡兔同笼：一个笼子里关着若干只鸡和兔，头数共有35个，脚数共有94只，问笼中鸡和兔各有多少只？"
+        instruction = "What is the capital of France?"
 
         response = model.talk(instruction)
         print(response)
